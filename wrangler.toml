@@ -20,3 +20,9 @@ compatibility_date = "2026-07-30"
 
 [assets]
 directory = "./dist"
+
+# Attached here rather than by hand in the dashboard, so the hostname is part of
+# the repo and a fresh deploy cannot come up without it.
+[[routes]]
+pattern = "test-card.stoatworks-labs.com"
+custom_domain = true
