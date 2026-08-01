@@ -1,0 +1,1504 @@
+{
+  "format": "pixel-peeker.interchange/1",
+  "generatedBy": "Pixel Peeker",
+  "project": {
+    "name": "Test Wall",
+    "client": "Acme"
+  },
+  "signal": {
+    "bitDepth": 8,
+    "frameRateHz": 60,
+    "ledRefreshHz": 3840
+  },
+  "wall": {
+    "widthPx": 3200,
+    "heightPx": 1800,
+    "referencePitchMm": 2.5,
+    "approximatePixelMap": false,
+    "cabinetCount": 144,
+    "totalPixels": 5760000
+  },
+  "capacityModel": {
+    "note": "Port capacity = link rate x efficiency / wire bits per pixel / frame rate. Pixels are packed into power-of-two containers (8-bit=24, 10-bit=32, 12-bit=48 bits), which reproduces NovaStar published per-port figures exactly.",
+    "wireBitsPerPixel": 24
+  },
+  "processors": [
+    {
+      "name": "MX40 Pro 1",
+      "model": "MX40 Pro",
+      "manufacturer": "NovaStar",
+      "deviceCapacityPx": 9000000,
+      "usedPx": 5760000,
+      "ports": [
+        {
+          "label": "ETH 1",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-0",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-16",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-32",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-48",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-64",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-80",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-96",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-112",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-128",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 0,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-129",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-113",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-97",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-81",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-65",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 2",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-49",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-33",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-17",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-1",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 200,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-2",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-18",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-34",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-50",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-66",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-82",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-98",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-114",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-130",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 400,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-131",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 3",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-115",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-99",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-83",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-67",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-51",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-35",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-19",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-3",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 600,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-4",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-20",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-36",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-52",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-68",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-84",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 4",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-100",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-116",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-132",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 800,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-133",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-117",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-101",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-85",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-69",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-53",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-37",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-21",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-5",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1000,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-6",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-22",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 5",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-38",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-54",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-70",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-86",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-102",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-118",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-134",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1200,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-135",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-119",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-103",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-87",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-71",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-55",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-39",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 6",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-23",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-7",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1400,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-8",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-24",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-40",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-56",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-72",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-88",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-104",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-120",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-136",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1600,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-137",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-121",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-105",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 7",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-89",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-73",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-57",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-41",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-25",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-9",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 1800,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-10",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-26",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-42",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-58",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-74",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-90",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-106",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-122",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 8",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-138",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2000,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-139",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-123",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-107",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-91",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-75",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-59",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-43",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-27",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-11",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2200,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-12",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-28",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-44",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-60",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 9",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-76",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-92",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-108",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-124",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-140",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2400,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-141",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-125",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-109",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-93",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-77",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-61",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-45",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-29",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-13",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2600,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 10",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 560000,
+          "utilisationPct": 85,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-14",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-30",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-46",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-62",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 5,
+              "id": "cab-78",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 6,
+              "id": "cab-94",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 7,
+              "id": "cab-110",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 8,
+              "id": "cab-126",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 9,
+              "id": "cab-142",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 2800,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 10,
+              "id": "cab-143",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 1600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 11,
+              "id": "cab-127",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 1400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 12,
+              "id": "cab-111",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 1200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 13,
+              "id": "cab-95",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 1000,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 14,
+              "id": "cab-79",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 800,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 11",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 160000,
+          "utilisationPct": 24,
+          "cabinets": [
+            {
+              "order": 1,
+              "id": "cab-63",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 600,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 2,
+              "id": "cab-47",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 400,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 3,
+              "id": "cab-31",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 200,
+              "widthPx": 200,
+              "heightPx": 200
+            },
+            {
+              "order": 4,
+              "id": "cab-15",
+              "model": "PL2.5 Pro V2 (NovaStar)",
+              "xPx": 3000,
+              "yPx": 0,
+              "widthPx": 200,
+              "heightPx": 200
+            }
+          ]
+        },
+        {
+          "label": "ETH 12",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 13",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 14",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 15",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 16",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 17",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 18",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 19",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        },
+        {
+          "label": "ETH 20",
+          "linkSpeedGbps": 1,
+          "capacityPx": 659722,
+          "usedPx": 0,
+          "utilisationPct": 0,
+          "cabinets": []
+        }
+      ]
+    }
+  ],
+  "unpatchedCabinets": []
+}
