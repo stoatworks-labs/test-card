@@ -100,7 +100,14 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>Test Card</h1>
+        <div className="header-row">
+          <h1>Test Card</h1>
+          {/* Opens the shared About dialog — see public/about.js, which delegates
+              this attribute from the document, so nothing needs importing here. */}
+          <button type="button" data-stoatworks-about>
+            About
+          </button>
+        </div>
         <p>
           Test patterns for every physical output in a Resolume advanced output, a Pixel
           Peeker wall or a Blend Calc array.
