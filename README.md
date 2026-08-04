@@ -99,6 +99,10 @@ for the invariants and the traps.
   headers checked. Bar colours and pluge values sampled off the canvas and
   confirmed against the standard.
 
+<!-- attributions:start -->
+This project is built on other people's work — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+<!-- attributions:end -->
+
 ## Licence
 
 MIT. Not a distributable product — this repo exists to feed the deployed web
