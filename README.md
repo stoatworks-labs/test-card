@@ -1,5 +1,17 @@
 # Test Card
 
+> **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
+> (Anthropic), directed and reviewed by a human author. The RP 219 pattern is asserted against a
+> reference *measured* from ffmpeg's `smptehdbars` at four resolutions rather than transcribed from
+> prose descriptions of the standard, and its fifteen colours are computed through Rec. 709 and land
+> exactly on those measured values — which is itself the proof the measurement is sound. The
+> importers are tested against real files: Arena 7.27.0's own advanced-output XML, and exports
+> produced by Blend Calc's and Pixel Peeker's own test suites. The ZIP writer is checked against the
+> published CRC-32 vector and its archives unpacked with the system `unzip`; 88 tests in all, and
+> the whole path has been driven end to end in a browser. **No image it produces has been played
+> out to a real projector, LED processor or display and measured.** The patterns are correct as
+> pixels; what a screen does with them is not something this can tell you.
+
 Generate test patterns for every physical output in a show, from the file that
 already describes the outputs.
 
