@@ -136,3 +136,10 @@ than editing the XML by hand.
 - **No releases or installers.** This repo exists to feed the deployed app, like
   blend-calc and pixel-peeker. Its absence from the fleet's download tooling is
   the design, not a gap.
+
+## Notes
+
+`docs/NOTES.md` carries this repo's working notes — current status, decisions
+already made, and the traps that have actually bitten. Read it before changing
+anything non-obvious. Cross-cutting fleet knowledge lives in
+[fleet-notes](https://github.com/stoatworks-labs/fleet-notes).
