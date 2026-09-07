@@ -111,6 +111,36 @@ for the invariants and the traps.
   headers checked. Bar colours and pluge values sampled off the canvas and
   confirmed against the standard.
 
+<!-- selfhost:start -->
+## Run your own copy
+
+Test Card is a static page, so hosting it yourself is one container serving
+the built files — the same files the hosted copy serves, running somewhere that
+still works when the venue has no internet.
+
+**Docker.** The image is built by this repo's `docker.yml` workflow on every
+push and published as `ghcr.io/stoatworks-labs/test-card`:
+
+```bash
+docker run -d --name test-card --restart unless-stopped -p 8522:80 ghcr.io/stoatworks-labs/test-card:latest
+```
+
+Or `docker compose up -d` with the [`docker-compose.yml`](docker-compose.yml)
+in this repo, which maps the same port. Either way it is then at
+`http://localhost:8522/`.
+
+**Unraid.** Search Community Applications for *Test Card* — the template is
+[`templates/test-card.xml`](https://github.com/stoatworks-labs/stoatworks-unraid/blob/main/templates/test-card.xml)
+in [stoatworks-unraid](https://github.com/stoatworks-labs/stoatworks-unraid), which is what the CA feed reads.
+
+**Stoatworks Burrow** lists it under *Self-hosted*, with the compose file a
+click away.
+
+The `Dockerfile`, `docker-compose.yml`, `docker/` and the workflow are
+generated from `fleet.json` in stoatworks-unraid. Change them there and
+regenerate rather than editing them here.
+<!-- selfhost:end -->
+
 <!-- attributions:start -->
 This project is built on other people's work — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 <!-- attributions:end -->
