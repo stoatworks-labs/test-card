@@ -20,6 +20,10 @@ projector array, and get one PNG per physical output at that output's exact
 raster — or a single composition-sized image that proves the output map is what
 you think it is. Everything runs in the browser; nothing is uploaded.
 
+![Test Card with one 1920 × 1080 output: SMPTE RP 219 bars with the output name and resolution burnt in](docs/screenshots/test-card.png)
+
+<sub>One 1920 × 1080 output added by hand, SMPTE RP 219 bars at full range with the output name and resolution burnt in. The preview is scaled; the exported PNG is pixel-exact.</sub>
+
 ## Patterns
 
 | Pattern | What it is for |
