@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Test Card">
+  <rect width="32" height="32" rx="6" fill="#0d1117"/>
+  <g id="mark">
+    <!-- Colour bars over a pluge strip: what the tool puts on every output. -->
+    <g>
+      <rect x="4.6" y="6" width="3.7" height="14" rx=".6" fill="#d9d9d9"/>
+      <rect x="8.5" y="6" width="3.7" height="14" rx=".6" fill="#d9d94d"/>
+      <rect x="12.4" y="6" width="3.7" height="14" rx=".6" fill="#4dd9d9"/>
+      <rect x="16.3" y="6" width="3.7" height="14" rx=".6" fill="#4dd94d"/>
+      <rect x="20.2" y="6" width="3.7" height="14" rx=".6" fill="#d94dd9"/>
+      <rect x="24.1" y="6" width="3.7" height="14" rx=".6" fill="#d94d4d"/>
+    </g>
+    <g fill="#3d7dff">
+      <rect x="4.6" y="22.2" width="10.3" height="4" rx=".8" opacity=".4"/>
+      <rect x="16.4" y="22.2" width="11.4" height="4" rx=".8"/>
+    </g>
+  </g>
+</svg>
