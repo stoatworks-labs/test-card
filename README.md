@@ -140,5 +140,6 @@ This project is built on other people's work — see [ATTRIBUTIONS.md](ATTRIBUTI
 
 ## Licence
 
-MIT. It's not a distributable product: this repo exists to feed the deployed web app, so it has no
-releases and no installers.
+MIT. There are no releases yet, so no installers: the hosted page and the container above are the
+ready-made ways to run it, and the menu-bar app in [`launcher/`](launcher/README.md) builds from
+source.

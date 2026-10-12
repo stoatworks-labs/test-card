@@ -36,8 +36,8 @@ python3 scripts/extract-rp219-reference.py > test/fixtures/rp219-ffmpeg.json
 ## Regenerating the importer fixtures
 
 ```bash
-BLEND_CALC_XML_OUT=/tmp/bc npx vitest run resolume   # in ~/Projects/blend-calc
-PP_WRITE_ARTEFACTS=/tmp/pp npx vitest run export     # in ~/Projects/pixel-peeker
+BLEND_CALC_XML_OUT=/tmp/bc npx vitest run resolume   # in ~/Projects/video/blend-calc
+PP_WRITE_ARTEFACTS=/tmp/pp npx vitest run export     # in ~/Projects/video/pixel-peeker
 ```
 
 Then copy into `test/fixtures/`. Never hand-edit them.

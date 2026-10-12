@@ -12,7 +12,7 @@ Pages, and `pages_build_output_dir` fails in a way that reads like a missing
 build step).
 
 Sibling projects, both of whose export formats this reads:
-`~/Projects/blend-calc` and `~/Projects/pixel-peeker`.
+`~/Projects/video/blend-calc` and `~/Projects/video/pixel-peeker`.
 
 ## The shape of it
 
@@ -118,9 +118,9 @@ hand-written:
   from this machine (a DeckLink output, so the raster must be inferred)
 - `resolume-arena-preset.xml` — a real saved Advanced Output preset
 - `blend-calc-export.xml` — `BLEND_CALC_XML_OUT=<dir> npx vitest run resolume`
-  in `~/Projects/blend-calc`
+  in `~/Projects/video/blend-calc`
 - `pixel-peeker-export.xml`, `pixel-peeker-interchange.json` —
-  `PP_WRITE_ARTEFACTS=<dir> npx vitest run export` in `~/Projects/pixel-peeker`
+  `PP_WRITE_ARTEFACTS=<dir> npx vitest run export` in `~/Projects/video/pixel-peeker`
 
 If you change an importer, regenerate the fixture from the sibling project rather
 than editing the XML by hand.
