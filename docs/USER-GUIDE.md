@@ -111,8 +111,8 @@ get a **Download MP4 loop** button. Set the length and frame rate under **Loop**
   the same speed behind another tab.
 - A loop that would come to more than about 1 GB is refused before it starts, since the whole file
   has to fit in the browser tab's memory.
-- **Too big for one video:** Chrome stops at 4096 × 2304 worth of pixels (9.4 megapixels, any
-  shape), so a bigger raster comes out as a grid of **tiles**: 8K is four 3840 × 2160. A note above
+- **Too big for one video:** Chrome stops at 4096 × 2304 worth of picture, in any shape, so a
+  bigger raster comes out as a grid of **tiles**: 8K is four 3840 × 2160. A note above
   the preview says which outputs will be tiled and how, and the button says it's a ZIP. Each tile
   is its own seamless loop of the same length; the manifest and each file name
   (`…_tile-r1c2_3840x2160+3840+0.mp4`: row, column, size, then x and y) say where it goes. Place
@@ -191,7 +191,9 @@ You can also just add outputs by hand.
 | **No MP4 button** | The pattern doesn't move. A broken wall moves if its picture does, or with flicker or data noise ticked. |
 | **"H.264 needs an even width and height"** | 4:2:0 video can't carry an odd raster. Export PNGs, or check the raster. |
 | **The MP4 comes as a ZIP of tiles** | The raster is bigger than this browser will encode as one video. Place each tile where its name and the manifest say. |
-| **"The browser's H.264 encoder will not take…, whole or cut into as many as 64 tiles"** | Even tiles didn't help, so this browser can't encode H.264 at all at this rate. Export PNGs. |
+| **"…will not take … Mb/s at …"** or **"… Mb/s is more than H.264 allows"** | The bitrate is too high for that raster. Lower it, or set 0 for auto. |
+| **"…will not make H.264 at … fps at any size"** | This browser's encoder can't do that frame rate. Try another, or a current Chrome or Edge, or export PNGs. |
+| **"…will not take …, whole or cut into as many as 64 tiles"** | Too big for this browser's encoder even in 64 pieces. Export PNGs. |
 | **An MP4 freezes after half a second in Resolume, then carries on at the wrap** | Arena's H.264 playback from cold, not the file. Convert it to DXV with Alley, or let it run once round before the show. |
-| **"That loop would be about … GB"** | Too long, too big or too high a bitrate to build in a tab, tiles and all. Shorten the loop or lower the bitrate. |
+| **"That loop would be about … GB"** or **"Those … loops would come to about … GB"** | Too long, too big or too high a bitrate to build in a tab, every tile and output in the ZIP counted. Shorten the loop, lower the bitrate, or export fewer outputs at a time. |
 | **The image has gone** | It's kept in this browser's storage. Another browser, a private window or cleared site data won't have it. |

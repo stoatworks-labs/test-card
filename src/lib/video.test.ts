@@ -229,13 +229,19 @@ describe('planLoop', () => {
   const g = globalThis as Record<string, unknown>
   const timing = { frames: 300, fpsNum: 30, fpsDen: 1, seconds: 10 }
   const asked: { width: number; height: number; bitrate: number }[] = []
-  /** Measured in Chrome 152 on a Mac: H.264 up to 4096 x 2304 of area, whatever the shape. */
-  function chrome152(maxArea = 4096 * 2304) {
+  /**
+   * Measured in Chrome 152 on a Mac: H.264 up to 36 864 macroblocks a frame
+   * (4096 x 2304, or 8192 x 1080), counted after padding to 16, whatever the
+   * shape and the frame rate. `maxBitrate` stands in for an encoder that also
+   * draws a line at bitrate.
+   */
+  function chrome152(maxMbs = 36864, maxBitrate = Infinity) {
     g.VideoFrame = class {}
     g.VideoEncoder = {
       isConfigSupported: async (c: VideoEncoderConfig) => {
         asked.push({ width: c.width, height: c.height, bitrate: c.bitrate ?? 0 })
-        return { supported: c.width * c.height <= maxArea, config: c }
+        const mbs = Math.ceil(c.width / 16) * Math.ceil(c.height / 16)
+        return { supported: mbs <= maxMbs && (c.bitrate ?? 0) <= maxBitrate, config: c }
       },
     }
   }
@@ -259,6 +265,8 @@ describe('planLoop', () => {
     [15360, 2160, 4, 1, 3840, 2160],
     [2160, 7680, 1, 2, 2160, 3840],
     [4096, 2306, 2, 1, 2048, 2306],
+    // Fewer pixels than 4096 x 2304, more macroblocks: refused whole in Chrome.
+    [4080, 2312, 2, 1, 2040, 2312],
   ])('cuts %ix%i into %ix%i tiles of %ix%i', async (w, h, cols, rows, tw, th) => {
     chrome152()
     const plan = await planLoop(w, h, timing, 0)
@@ -271,7 +279,7 @@ describe('planLoop', () => {
     // One second: at ten, thirty tiles of auto bitrate are 2.6 GB.
     const plan = await planLoop(16384, 16384, { frames: 30, fpsNum: 30, fpsDen: 1, seconds: 1 }, 0)
     expect([plan.cols, plan.rows]).toEqual([5, 6])
-    expect(plan.tiles.every((t) => t.width * t.height <= 4096 * 2304)).toBe(true)
+    expect(plan.tiles.every((t) => Math.ceil(t.width / 16) * Math.ceil(t.height / 16) <= 36864)).toBe(true)
   })
 
   it('shares a bitrate set by hand across the tiles by area, so the set comes to what was asked', async () => {
@@ -291,20 +299,54 @@ describe('planLoop', () => {
     chrome152()
     await planLoop(7680, 4320, timing, 0)
     const sizes = asked.map((a) => `${a.width}x${a.height}`)
-    // 1x1, 2x1, 1x2, 3x1 are refused on all three profiles; 2x2 passes on
-    // High, and its four identical tiles are one question.
-    expect(sizes).toEqual([
-      ...Array(3).fill('7680x4320'),
-      ...Array(3).fill('3840x4320'),
-      ...Array(3).fill('7680x2160'),
-      ...Array(3).fill('2560x4320'),
-      '3840x2160',
-    ])
+    // The whole raster is refused on all three profiles; a small probe says
+    // H.264 works at all, on High; 2x1, 1x2 and 3x1 are refused on High
+    // alone; 2x2 passes, and its four identical tiles are one question.
+    expect(sizes).toEqual(['7680x4320', '7680x4320', '7680x4320', '640x360', '3840x4320', '7680x2160', '2560x4320', '3840x2160'])
   })
 
   it('refuses before frame 0 when no grid fits', async () => {
+    // Takes the probe (40 x 23 macroblocks) but nothing 64 tiles of 16384 square can be cut into.
+    chrome152(1000)
+    const short = { frames: 30, fpsNum: 30, fpsDen: 1, seconds: 1 }
+    await expect(planLoop(16384, 16384, short, 0)).rejects.toThrow(/will not take 16384x16384, whole or cut into as many as 64 tiles/)
+  })
+
+  it('keeps the questions down when nothing fits: one profile, no grid already ruled out', async () => {
+    chrome152(1000)
+    const short = { frames: 30, fpsNum: 30, fpsDen: 1, seconds: 1 }
+    await planLoop(16384, 16384, short, 0).catch(() => undefined)
+    // Three profiles for the whole raster, the probe, then one question per
+    // grid not ruled out by a refused size: 265, where every grid on every
+    // profile was 793. About a third of a second in Chrome.
+    expect(asked.length).toBeLessThanOrEqual(265)
+    const sizes = asked.slice(4).map((a) => `${a.width}x${a.height}`)
+    expect(new Set(sizes).size).toBe(sizes.length)
+  })
+
+  it('says when the browser makes no H.264 at this rate at all, rather than trying every grid', async () => {
     chrome152(0)
-    await expect(planLoop(1920, 1080, timing, 0)).rejects.toThrow(/will not take 1920x1080, whole or cut into as many as 64 tiles/)
+    await expect(planLoop(7680, 4320, timing, 0)).rejects.toThrow(/will not make H\.264 at 30 fps at any size/)
+    // The whole raster and the probe, three profiles each.
+    expect(asked).toHaveLength(6)
+  })
+
+  it('names a bitrate above every H.264 level instead of tiling round it', async () => {
+    chrome152()
+    await expect(planLoop(1920, 1080, timing, 900e6)).rejects.toThrow(/900 Mb\/s is more than H\.264 allows at 1920x1080/)
+    expect(asked).toHaveLength(0)
+  })
+
+  it('names a bitrate the browser will not take instead of tiling round it', async () => {
+    chrome152(36864, 100e6)
+    await expect(planLoop(1920, 1080, timing, 200e6)).rejects.toThrow(/will not take 200 Mb\/s at 1920x1080/)
+  })
+
+  it('still tiles a raster too big at any bitrate, a hand-set one included', async () => {
+    chrome152(36864, 100e6)
+    const plan = await planLoop(7680, 4320, timing, 200e6)
+    expect([plan.cols, plan.rows]).toEqual([2, 2])
+    expect(plan.tiles.every((t) => t.bitrate === 50e6)).toBe(true)
   })
 
   it('refuses a set of tiles too big for the tab, all of them counted', async () => {

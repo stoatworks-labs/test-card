@@ -1,7 +1,7 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 247 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 254 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
@@ -101,11 +101,13 @@ tried either. It tells you before it starts if it can't.
 
 ### Too big for one video
 
-Chrome's H.264 encoder on a Mac stops at 4096 × 2304 worth of pixels, 9.4 megapixels whatever the
-shape: 8192 × 1080 is fine, 8K isn't, and nor are a fair few LED walls. So a raster bigger than the
-browser will encode comes out as a grid of tiles instead. 8K is four 3840 × 2160 tiles; 15360 × 2160
+Chrome's H.264 encoder on a Mac stops at 4096 × 2304 worth of picture, in any shape (it counts
+16-pixel squares, and allows 36,864 of them): 8192 × 1080 is fine, 8K isn't, and nor are a fair few
+LED walls. So a raster bigger than the browser will encode comes out as a grid of tiles instead. 8K is four 3840 × 2160 tiles; 15360 × 2160
 is four side by side. It asks the browser what it will take, picks the fewest tiles that fit without
-cutting the picture into slivers, and says so above the preview before you press anything.
+cutting the picture into slivers, and says so above the preview before you press anything. Tiles are
+only for size: a bitrate the encoder won't take, or a browser that won't do H.264 at that frame rate
+at all, gets told as such.
 
 Each tile is a seamless loop of its own, the same length as the rest, and they come in a ZIP whose
 manifest says where each one goes. So does the file name:

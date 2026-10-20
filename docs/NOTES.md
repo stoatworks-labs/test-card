@@ -137,9 +137,11 @@ nod to the 1998 page rather than a copy of it.
 
 Allan asked for loops too big for the browser to encode to come out as smaller
 tiles instead of an error. Measured first, in Chrome 152 on this Mac
-(`VideoEncoder.isConfigSupported`): H.264 stops at 4096 x 2304 of area whatever
-the shape, on every profile and with hardware or software preferred. 8192 x
-1080 yes, 4096 x 2306 no, nothing at 8K. HEVC, VP9 and AV1 all said yes to 8K,
+(`VideoEncoder.isConfigSupported`): H.264 stops at 36 864 macroblocks a frame,
+level 5.1's MaxFS, 4096 x 2304 in any shape and at 60 fps too, on every profile
+and with hardware or software preferred. 8192 x 1080 yes; 4096 x 2306 no, and
+nor 4080 x 2312, which has fewer pixels than 4096 x 2304 but more macroblocks
+(the review caught that I had first called it an area limit). Nothing at 8K. HEVC, VP9 and AV1 all said yes to 8K,
 but the muxer only does H.264, and a tile works in any media server.
 
 `planLoop` tries grids in order of tile count times (1 + |ln aspect|), asking
@@ -158,6 +160,17 @@ band on each seam as elsewhere. A per-output set (two UHD outputs whole, one 8K
 tiled) and a 7680 x 2160 composition (2 x 1, mean |error| 0.61) also worked;
 a single UHD output still downloads as a bare MP4. The export carried on with
 the pane hidden.
+
+An independent review found two real bugs, both fixed before landing: a
+bitrate above every level, or one the encoder refused, was tiled round instead
+of reported (1080p at 900 Mb/s came out as two 450 Mb/s halves); and a browser
+with no H.264 at that frame rate made the planner ask about every grid, 705
+questions per raster per keystroke, before a misleading "will not take". Now
+the whole raster is retried at auto bitrate and a 640x360 probe settles "H.264
+at all", and grids are asked about on the probe's profile only, skipping any no
+smaller than a size already refused. It also found the 1 GB tab limit applied
+per output, not per ZIP, which tiling made reachable (three 8K outputs), and a
+manifest that could name files the ZIP had renamed; both fixed.
 
 Not run: tiles played together in Resolume or any media server, other
 browsers, a tiled broken wall at full length (it is slow by design).

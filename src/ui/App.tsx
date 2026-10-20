@@ -28,7 +28,8 @@ import {
 import { isAnimated } from '../patterns/env'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
-import { encodePlan, planLoop, type EncodeRequest, type LoopPlan } from '../lib/video'
+import { encodePlan, MAX_LOOP_BYTES, planBytes, planLoop, type EncodeRequest, type LoopPlan } from '../lib/video'
+import { uniqueNames } from '../lib/zip'
 import { clearImage, decodeImage, loadImage } from '../state/image-store'
 
 class Cancelled extends Error {}
@@ -84,8 +85,8 @@ export default function App() {
 
   // Which loops this browser will only take as tiles, worked out ahead so the
   // page can say so before anyone presses the button. Errors are left for the
-  // export itself to report, in full.
-  const [tiling, setTiling] = useState<{ label: string; width: number; height: number; plan: LoopPlan }[]>([])
+  // export itself to report, in full. The answer carries the inputs it was
+  // worked out for, and is not shown against any others.
   const { seconds, fps, bitrateMbps } = store.settings.animation
   const rasters =
     store.mode === 'composition'
@@ -93,112 +94,133 @@ export default function App() {
         ? [{ label: 'The composition', width: store.composition.widthPx, height: store.composition.heightPx }]
         : []
       : enabled.map((o) => ({ label: o.name, width: o.widthPx, height: o.heightPx }))
-  const rastersKey = JSON.stringify(rasters)
+  const planKey = JSON.stringify({ moving, rasters, seconds, fps, bitrateMbps })
+  const [tilingFor, setTilingFor] = useState<{ key: string; found: { label: string; width: number; height: number; plan: LoopPlan }[] }>({
+    key: '',
+    found: [],
+  })
+  const tiling = tilingFor.key === planKey ? tilingFor.found : []
   useEffect(() => {
-    if (!moving) {
-      setTiling([])
-      return
-    }
+    const ask = JSON.parse(planKey) as { moving: boolean; rasters: typeof rasters; seconds: number; fps: typeof fps; bitrateMbps: number }
+    if (!ask.moving) return
     let live = true
-    const timing = loopTiming({ seconds, fps })
-    const bitrate = Math.max(0, bitrateMbps) * 1e6
-    const targets = JSON.parse(rastersKey) as typeof rasters
+    const timing = loopTiming({ seconds: ask.seconds, fps: ask.fps })
+    const bitrate = Math.max(0, ask.bitrateMbps) * 1e6
     void Promise.all(
-      targets.map((r) =>
+      ask.rasters.map((r) =>
         planLoop(r.width, r.height, timing, bitrate).then(
           (plan) => (plan.tiles.length > 1 ? { ...r, plan } : null),
           () => null,
         ),
       ),
     ).then((found) => {
-      if (live) setTiling(found.filter((f) => f !== null))
+      if (live) setTilingFor({ key: planKey, found: found.filter((f) => f !== null) })
     })
     return () => {
       live = false
     }
-  }, [moving, rastersKey, seconds, fps, bitrateMbps])
+  }, [planKey])
 
   async function exportLoops() {
     const settings = store.settings
     const timing = loopTiming(settings.animation)
     const range = canvasRange(settings)
     const bitrate = Math.max(0, settings.animation.bitrateMbps) * 1e6
-    const files: { name: string; data: Uint8Array }[] = []
-    const tiled: TiledLoop[] = []
 
-    // Plan every loop before encoding any, so a raster no grid will fit is
-    // refused before minutes go into the ones ahead of it.
     type Job = { label: string; name: string; width: number; height: number; render: EncodeRequest['render'] }
-    const plan = async (job: Job) => {
+    const composition = store.mode === 'composition'
+    let jobs: Job[]
+    if (composition) {
+      const comp = store.composition
+      if (!comp) throw new Error('No composition size for this import.')
+      jobs = [
+        {
+          label: 'Composition',
+          name: compositionFileName(store.projectName, settings, comp.widthPx, comp.heightPx, 'mp4'),
+          width: comp.widthPx,
+          height: comp.heightPx,
+          render: (ctx, t) => renderCompositionTo(ctx, store.outputs, comp, settings, t),
+        },
+      ]
+    } else {
+      if (!enabled.length) throw new Error('No outputs are enabled.')
+      jobs = enabled.map((output) => ({
+        label: output.name,
+        name: outputFileName(output, settings, 'mp4'),
+        width: output.widthPx,
+        height: output.heightPx,
+        render: (ctx, t) => renderOutputTo(ctx, output, settings, t, store.composition),
+      }))
+    }
+
+    // Plan every loop before encoding any, so a raster nothing will fit, or a
+    // set too big to hold, is refused before minutes go into the ones ahead.
+    const plans: LoopPlan[] = []
+    for (const job of jobs) {
       try {
-        return await planLoop(job.width, job.height, timing, bitrate)
+        plans.push(await planLoop(job.width, job.height, timing, bitrate))
       } catch (err) {
         throw new Error(`${job.label}: ${(err as Error).message}`)
       }
     }
-    const encode = async (job: Job, loop: LoopPlan, label: string) => {
+    // Every finished file is held until the ZIP is built, so the limit on one
+    // loop is the limit on all of them together.
+    const total = plans.reduce((sum, p) => sum + planBytes(p, timing), 0)
+    if (total > MAX_LOOP_BYTES) {
+      throw new Error(
+        `Those ${jobs.length} loops would come to about ${(total / 1024 ** 3).toFixed(1)} GB together, more than a browser tab can build. ` +
+          'Export fewer outputs at a time, shorten the loop, or lower the bitrate.',
+      )
+    }
+    // Names settled now, and made unique as the ZIP would store them, so the
+    // manifest names what is actually in it.
+    const wanted = jobs.map((job, i) =>
+      plans[i]!.tiles.length === 1 ? [job.name] : plans[i]!.tiles.map((t) => tileFileName(job.name, t)),
+    )
+    const unique = uniqueNames(wanted.flat())
+    let next = 0
+    const names = wanted.map((list) => list.map(() => unique[next++]!))
+
+    const files: { name: string; data: Uint8Array }[] = []
+    const tiled: TiledLoop[] = []
+    const cells: string[] = []
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i]!
+      const loop = plans[i]!
       const parts = loop.tiles.length
+      const label = composition
+        ? 'Encoding composition'
+        : jobs.length > 1
+          ? `Encoding ${i + 1} of ${jobs.length}, ${job.label}`
+          : `Encoding ${job.label}`
       const data = await encodePlan(loop, {
         timing,
         range,
         render: job.render,
-        onProgress: (done, total, tile) => {
+        onProgress: (done, frames, tile) => {
           if (cancel.current) throw new Cancelled('Cancelled.')
-          setBusy(`${label}${parts > 1 ? `, tile ${tile + 1} of ${parts}` : ''} — frame ${done} of ${total}`)
+          setBusy(`${label}${parts > 1 ? `, tile ${tile + 1} of ${parts}` : ''} — frame ${done} of ${frames}`)
         },
       })
+      data.forEach((bytes, j) => files.push({ name: names[i]![j]!, data: bytes }))
       if (parts === 1) {
-        files.push({ name: job.name, data: data[0]! })
-        return job.name
+        cells.push(names[i]![0]!)
+      } else {
+        const placed = loop.tiles.map((t, j) => ({ ...t, name: names[i]![j]! }))
+        tiled.push({ label: job.label, width: job.width, height: job.height, cols: loop.cols, rows: loop.rows, files: placed })
+        cells.push(`${parts} tiles listed below`)
       }
-      const named = loop.tiles.map((t) => ({ ...t, name: tileFileName(job.name, t) }))
-      named.forEach((t, i) => files.push({ name: t.name, data: data[i]! }))
-      tiled.push({ label: job.label, width: job.width, height: job.height, cols: loop.cols, rows: loop.rows, files: named })
-      return `${parts} tiles listed below`
-    }
-    const pack = (outputs: typeof enabled, cells: string[]) => {
-      setBusy('Packing ZIP…')
-      const zip = packageZip(files, buildManifest(store.projectName, outputs, cells, settings, 'mp4', tiled))
-      downloadBlob(zipFileName(store.projectName, settings, 'mp4'), zip, 'application/zip')
     }
 
-    if (store.mode === 'composition') {
-      const comp = store.composition
-      if (!comp) throw new Error('No composition size for this import.')
-      const job: Job = {
-        label: 'Composition',
-        name: compositionFileName(store.projectName, settings, comp.widthPx, comp.heightPx, 'mp4'),
-        width: comp.widthPx,
-        height: comp.heightPx,
-        render: (ctx, t) => renderCompositionTo(ctx, store.outputs, comp, settings, t),
-      }
-      await encode(job, await plan(job), 'Encoding composition')
-      if (files.length === 1) downloadBlob(files[0]!.name, files[0]!.data, 'video/mp4')
-      else pack([], [])
-      return
-    }
-
-    if (!enabled.length) throw new Error('No outputs are enabled.')
-    const jobs: Job[] = enabled.map((output) => ({
-      label: output.name,
-      name: outputFileName(output, settings, 'mp4'),
-      width: output.widthPx,
-      height: output.heightPx,
-      render: (ctx, t) => renderOutputTo(ctx, output, settings, t, store.composition),
-    }))
-    const plans: LoopPlan[] = []
-    for (const job of jobs) plans.push(await plan(job))
-    const cells: string[] = []
-    for (let i = 0; i < jobs.length; i++) {
-      const job = jobs[i]!
-      const label = jobs.length > 1 ? `Encoding ${i + 1} of ${jobs.length}, ${job.label}` : `Encoding ${job.label}`
-      cells.push(await encode(job, plans[i]!, label))
-    }
     if (files.length === 1) {
       downloadBlob(files[0]!.name, files[0]!.data, 'video/mp4')
       return
     }
-    pack(enabled, cells)
+    setBusy('Packing ZIP…')
+    const manifest = composition
+      ? buildManifest(store.projectName, [], [], settings, 'mp4', tiled)
+      : buildManifest(store.projectName, enabled, cells, settings, 'mp4', tiled)
+    downloadBlob(zipFileName(store.projectName, settings, 'mp4'), packageZip(files, manifest), 'application/zip')
   }
 
   async function run(job: () => Promise<void>) {
@@ -343,7 +365,7 @@ export default function App() {
                           ? 'Download composition MP4 tiles (ZIP)'
                           : 'Download composition MP4'
                         : enabled.length > 1
-                          ? `Download ZIP of ${enabled.length} MP4 loops`
+                          ? `Download ZIP of ${enabled.length} MP4 loops${tiling.length ? ', some as tiles' : ''}`
                           : tiling.length
                             ? 'Download MP4 tiles (ZIP)'
                             : 'Download MP4 loop'}

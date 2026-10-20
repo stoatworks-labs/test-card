@@ -177,15 +177,23 @@ second first, throws it away, and starts the loop proper on a forced keyframe.
 A fixed quantiser (`bitrateMode: 'quantizer'`) fixed it too, but in Chrome 152
 on a Mac it fell back to the software encoder and ran ten times slower.
 
-**Chrome's encoder refuses odd rasters and anything over 9.4 megapixels.** 4:2:0
-needs even sides. Chrome 152 on a Mac takes H.264 up to 4096 x 2304 of AREA,
-whatever the shape (measured with `isConfigSupported`, 2026-10-20: 8192x1080
-and 2304x4096 yes, 4096x2306 and 4112x2304 no), on High, Main and Baseline,
-hardware or software alike. HEVC, VP9 and AV1 said yes at 8K, but mp4.ts only
-writes H.264. So `planLoop()` cuts a bigger raster into tiles before frame 0,
-asking `isConfigSupported` about each tile size rather than trusting a table,
-and `encodePlan()` encodes them one after another. Never let it fail at frame
-900.
+**Chrome's encoder refuses odd rasters and anything over 36 864 macroblocks.**
+4:2:0 needs even sides. Chrome 152 on a Mac takes H.264 up to 36 864 16x16
+macroblocks a frame, counted after padding, whatever the shape and at 60 fps
+too: level 5.1's MaxFS, 4096 x 2304 (measured with `isConfigSupported`,
+2026-10-20: 8192x1080 and 2304x4096 yes; 4096x2306, 4112x2304 and 4080x2312,
+fewer pixels but more macroblocks, no), on High, Main and Baseline, hardware or
+software alike. HEVC, VP9 and AV1 said yes at 8K, but mp4.ts only writes H.264.
+So `planLoop()` cuts a bigger raster into tiles before frame 0 and
+`encodePlan()` encodes them one after another. Never let it fail at frame 900.
+
+`planLoop` asks the browser, not a table, in this order: the whole raster on
+every profile; if refused, the same at auto bitrate (a hand-set bitrate the
+encoder won't take is an error, not a reason to tile); a 640x360 probe (a
+browser with no H.264 at this frame rate is an error, not a reason to ask
+about every grid); then grids, on the probe's profile alone, skipping any
+whose tiles are no smaller both ways than a size already refused. Before
+those, it asked up to 793 questions for a raster nothing fits; now 265.
 
 **A video tile is the whole picture shifted, not a crop.** `encodePlan` draws
 each tile by translating the full raster's render under a canvas the size of
@@ -209,8 +217,10 @@ the same time behind another tab as in front. A minimised window is untested.
 **A loop is held whole in memory.** Every encoded frame stays until the file is
 written, then is copied into the MP4 and again into the download. `encodeLoop`
 refuses anything estimated over `MAX_LOOP_BYTES` (1 GiB) before frame 0, and
-`planLoop` counts every tile of a tiled loop against the same limit: the
-finished tiles are all held until the ZIP is built.
+`planLoop` counts every tile of a tiled loop against the same limit, and the
+export adds up every loop going in one ZIP (tiles made 8K outputs possible, and
+three of them at 1 GB each would otherwise be built and then die): the finished
+files are all held until the ZIP is built.
 
 **Vite caches a dynamically imported module across edits.** Driving the encoder
 from the browser console with `await import('/src/lib/video.ts')` keeps handing
@@ -231,7 +241,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 247 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 254 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with

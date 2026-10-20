@@ -172,7 +172,8 @@ export function buildManifest(
       'they are the whole picture, frame for frame.',
     )
     for (const t of tiled) {
-      lines.push('', `${t.label}, ${t.width}x${t.height}, as ${t.cols}x${t.rows} tiles`, 'file, x, y, width, height')
+      const label = t.label.includes(',') ? `"${t.label}"` : t.label
+      lines.push('', `${label}, ${t.width}x${t.height}, as ${t.cols}x${t.rows} tiles`, 'file, x, y, width, height')
       for (const f of t.files) lines.push([f.name, f.x, f.y, f.width, f.height].join(', '))
     }
   }

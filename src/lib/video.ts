@@ -23,9 +23,10 @@
  * TOO BIG FOR ONE VIDEO, SO TILES
  * ===============================
  * A browser's H.264 encoder stops well short of a big wall. Chrome 152 on a Mac
- * refuses anything over 4096 x 2304 = 9.4 megapixels, whatever its shape:
- * 8192 x 1080 and 2304 x 4096 are fine, 4096 x 2306 is not, and nothing at 8K
- * is. So `planLoop` cuts a raster the encoder will not take whole into a grid
+ * refuses anything over 36 864 macroblocks a frame (H.264 level 5.1's frame
+ * size, 4096 x 2304 or the same number of 16 px squares in any shape): 8192 x
+ * 1080 and 2304 x 4096 are fine, 4096 x 2306 and 4080 x 2312 are not, and
+ * nothing at 8K is. So `planLoop` cuts a raster the encoder will not take whole into a grid
  * of tiles, each a loop of its own, which side by side are the picture frame
  * for frame. It asks the browser rather than a table, since the limit is the
  * browser's and not the standard's: the fewest tiles it will take, without
@@ -174,9 +175,14 @@ export function estimateLoopBytes(width: number, height: number, timing: LoopTim
   return (bps * (timing.seconds + 1)) / 8
 }
 
-/** The first codec this browser will configure for the raster, rate and bitrate, or null. */
-async function findConfig(width: number, height: number, fps: number, bitrate: number): Promise<VideoEncoderConfig | null> {
+/**
+ * The first codec this browser will configure for the raster, rate and
+ * bitrate, or null. `profile` ('avc1.6400' for High, say) asks about that
+ * profile alone.
+ */
+async function findConfig(width: number, height: number, fps: number, bitrate: number, profile?: string): Promise<VideoEncoderConfig | null> {
   for (const codec of avcCodecs(width, height, fps, bitrate)) {
+    if (profile && !codec.startsWith(profile)) continue
     const config: VideoEncoderConfig = {
       codec,
       width,
@@ -283,52 +289,96 @@ export function tileGrids(width: number, height: number, maxTiles = MAX_VIDEO_TI
     .map(({ cols, rows }) => ({ cols, rows }))
 }
 
+/** Roughly how big a planned loop's files come to, every tile and warm-up included. */
+export function planBytes(plan: LoopPlan, timing: LoopTiming): number {
+  return plan.tiles.reduce((sum, t) => sum + estimateLoopBytes(t.width, t.height, timing, t.bitrate), 0)
+}
+
+/** A size any H.264 encoder takes. Refused, the browser will not make H.264 at this rate at all. */
+const PROBE = { width: 640, height: 360 }
+
 /**
  * How to make this loop: whole if the browser's encoder takes it, else the
- * fewest tiles it takes. A bitrate the user set is for the whole picture, so
- * each tile gets its share by area and the files come to what was asked for;
- * auto stays auto, sized for each tile. Throws, before any frame is drawn, for
- * anything that would fail later: no encoder, an odd raster, no grid the
- * encoder will take, or a set of files too big for the tab.
+ * fewest tiles it takes. Tiles are only for a raster refused for its SIZE: a
+ * bitrate the encoder will not take, or no H.264 at this frame rate at all, is
+ * said as such, since tiling would hide the real problem (and, for the second,
+ * ask about every grid there is). A bitrate the user set is for the whole
+ * picture, so each tile gets its share by area and the files come to what was
+ * asked for; auto stays auto, sized for each tile. Throws, before any frame is
+ * drawn, for anything that would fail later: no encoder, an odd raster, no
+ * grid the encoder will take, or files too big for the tab.
  */
 export async function planLoop(width: number, height: number, timing: LoopTiming, bitrate: number): Promise<LoopPlan> {
   const problem = videoProblem(width, height)
   if (problem) throw new Error(problem)
   const fps = timing.fpsNum / timing.fpsDen
   const answers = new Map<string, Promise<boolean>>()
+  let profile: string | undefined
   const takes = (w: number, h: number, bps: number) => {
     const key = `${w}x${h}@${bps}`
-    if (!answers.has(key)) answers.set(key, findConfig(w, h, fps, bps).then((c) => c !== null))
+    if (!answers.has(key)) answers.set(key, findConfig(w, h, fps, bps, profile).then((c) => c !== null))
     return answers.get(key)!
   }
+  const sized = (plan: LoopPlan) => {
+    const size = planBytes(plan, timing)
+    if (size > MAX_LOOP_BYTES) {
+      throw new Error(
+        `That loop would be about ${(size / 1024 ** 3).toFixed(1)} GB${plan.tiles.length > 1 ? ` across ${plan.tiles.length} tiles` : ''}, ` +
+          'more than a browser tab can build. Shorten it, lower the bitrate, or export a smaller output.',
+      )
+    }
+    return plan
+  }
 
-  let plan: LoopPlan | null = null
+  const auto = autoBitrate(width, height, fps)
+  const whole = bitrate || auto
+  if (avcLevel(width, height, fps) !== null && avcLevel(width, height, fps, whole) === null) {
+    throw new Error(`${(whole / 1e6).toFixed(0)} Mb/s is more than H.264 allows at ${width}x${height}. Lower the bitrate.`)
+  }
+  if (await takes(width, height, whole)) {
+    return sized({ cols: 1, rows: 1, tiles: [{ col: 0, row: 0, x: 0, y: 0, width, height, bitrate }] })
+  }
+  if (bitrate > auto && (await takes(width, height, auto))) {
+    throw new Error(
+      `This browser's H.264 encoder will not take ${(bitrate / 1e6).toFixed(0)} Mb/s at ${width}x${height}. ` +
+        'Lower the bitrate, or set it to 0 for auto.',
+    )
+  }
+  const probe = await findConfig(PROBE.width, PROBE.height, fps, autoBitrate(PROBE.width, PROBE.height, fps))
+  if (!probe) {
+    throw new Error(
+      `This browser's video encoder will not make H.264 at ${Number(fps.toFixed(3))} fps at any size. ` +
+        'Export PNGs, or use a current Chrome or Edge.',
+    )
+  }
+  // Tiles are asked about in the profile the probe got, alone: a third of the
+  // questions, and when nothing fits there are a few hundred grids to refuse.
+  // The whole raster was tried on every profile above.
+  profile = probe.codec.slice(0, -2)
+
+  // A tile at least as big both ways as one already refused would be refused
+  // too (its bitrate, auto or shared, is no lower), so it is not asked about.
+  const refused: [number, number][] = [[width, height]]
   search: for (const { cols, rows } of tileGrids(width, height)) {
+    if (cols * rows === 1) continue
     const tiles = tileGrid(width, height, cols, rows).map((t) => ({
       ...t,
       bitrate: bitrate ? Math.round((bitrate * t.width * t.height) / (width * height)) : 0,
     }))
+    if (tiles.some((t) => refused.some(([w, h]) => t.width >= w && t.height >= h))) continue
     // Largest first: if any tile is refused, it is most likely that one.
     for (const t of [...tiles].sort((a, b) => b.width * b.height - a.width * a.height)) {
-      if (!(await takes(t.width, t.height, t.bitrate || autoBitrate(t.width, t.height, fps)))) continue search
+      if (!(await takes(t.width, t.height, t.bitrate || autoBitrate(t.width, t.height, fps)))) {
+        refused.push([t.width, t.height])
+        continue search
+      }
     }
-    plan = { cols, rows, tiles }
-    break
+    return sized({ cols, rows, tiles })
   }
-  if (!plan) {
-    throw new Error(
-      `This browser's H.264 encoder will not take ${width}x${height}, whole or cut into as many as ${MAX_VIDEO_TILES} tiles. ` +
-        'Export PNGs, or render a smaller output.',
-    )
-  }
-  const size = plan.tiles.reduce((sum, t) => sum + estimateLoopBytes(t.width, t.height, timing, t.bitrate), 0)
-  if (size > MAX_LOOP_BYTES) {
-    throw new Error(
-      `That loop would be about ${(size / 1024 ** 3).toFixed(1)} GB${plan.tiles.length > 1 ? ` across ${plan.tiles.length} tiles` : ''}, ` +
-        'more than a browser tab can build. Shorten it, lower the bitrate, or export a smaller output.',
-    )
-  }
-  return plan
+  throw new Error(
+    `This browser's H.264 encoder will not take ${width}x${height}, whole or cut into as many as ${MAX_VIDEO_TILES} tiles. ` +
+      'Export PNGs, or render a smaller output.',
+  )
 }
 
 /**

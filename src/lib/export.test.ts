@@ -139,6 +139,13 @@ describe('video tiles', () => {
     expect(m).toContain('a_tile-r1c2.mp4, 3840, 0, 3840, 2160')
   })
 
+  it('quotes a tiled output’s name that has a comma in it', () => {
+    const m = buildManifest('Show', [out('Left, Main', 7680, 2160)], ['1 tiles listed below'], s, 'mp4', [
+      { label: 'Left, Main', width: 7680, height: 2160, cols: 2, rows: 1, files: [{ ...tile, name: 'c.mp4' }] },
+    ])
+    expect(m).toContain('"Left, Main", 7680x2160, as 2x1 tiles')
+  })
+
   it('leaves out the output table for a tiled composition, which has no outputs of its own', () => {
     const m = buildManifest('Show', [], [], s, 'mp4', [
       { label: 'Composition', width: 7680, height: 2160, cols: 2, rows: 1, files: [{ ...tile, name: 'c.mp4' }] },
