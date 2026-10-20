@@ -93,6 +93,7 @@ function OutputRow({
             {output.regions.length
               ? ` · ${output.regions.length} region${output.regions.length === 1 ? '' : 's'}`
               : ''}
+            {output.pitchMm ? ` · ${output.pitchMm} mm` : ''}
           </span>
         </div>
         <button
@@ -139,6 +140,46 @@ function OutputRow({
             </label>
           </div>
           <p className={inferred ? 'hint warn' : 'hint'}>{SOURCE_NOTE[output.rasterSource]}</p>
+          <div className="row">
+            <label className="field">
+              <span>Pixel pitch (mm)</span>
+              <input
+                type="number"
+                step="any"
+                min={0.05}
+                placeholder="not set"
+                value={output.pitchMm ?? ''}
+                onChange={(e) => {
+                  if (e.target.value === '') {
+                    onChange({ pitchMm: undefined, pitchSource: undefined })
+                    return
+                  }
+                  const v = Number(e.target.value)
+                  if (v > 0) onChange({ pitchMm: v, pitchSource: 'manual' })
+                }}
+              />
+            </label>
+            <label className="field">
+              <span>or its width (m)</span>
+              <input
+                type="number"
+                step="any"
+                min={0}
+                placeholder="—"
+                value={output.pitchMm ? Math.round(output.widthPx * output.pitchMm) / 1000 : ''}
+                onChange={(e) => {
+                  const m = Number(e.target.value)
+                  if (m > 0) onChange({ pitchMm: (m * 1000) / output.widthPx, pitchSource: 'manual' })
+                }}
+              />
+            </label>
+          </div>
+          <p className="hint">
+            {output.pitchMm
+              ? `${((output.widthPx * output.pitchMm) / 1000).toFixed(3)} x ${((output.heightPx * output.pitchMm) / 1000).toFixed(3)} m. ` +
+                (output.pitchSource === 'imported' ? 'Pitch from the imported wall.' : 'Pitch typed in by you.')
+              : 'Only the rulers, the bananas and the life-size dinosaurs use the pitch. For a projector, type the image width.'}
+          </p>
           {output.device ? <p className="hint">Device: {output.device}</p> : null}
           {output.notes.map((n, i) => (
             <p className="hint warn" key={i}>

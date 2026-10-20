@@ -383,6 +383,66 @@ type Tile = {
   group?: string
 }
 
+/**
+ * The LED tiles for a canvas, for the patterns that work per tile (bananas,
+ * hamsters, the broken wall).
+ *
+ * `scale` converts the output's raster pixels into the canvas's units when
+ * those differ. A uniform grid starts at the output's own origin (plus the
+ * stated offset) — cabinets belong to the processor output that drives them,
+ * wherever that output sits in a composition. `view` shifts the grid for a
+ * caller that wants it anchored somewhere else; render.ts passes 0.
+ */
+/**
+ * More tiles than this and the per-tile patterns refuse rather than try: 1 px
+ * tiles on a 4K output are eight million of them, and a hamster each would hang
+ * the tab. The pattern says so on the image instead.
+ */
+export const MAX_TILES = 50_000
+
+/** How many uniform tiles a canvas would need, without making them. */
+export function uniformTileCount(w: number, h: number, opts: LedTileOptions, scale = 1): number {
+  const tw = Math.max(1e-6, opts.tileWidthPx * scale)
+  const th = Math.max(1e-6, opts.tileHeightPx * scale)
+  return (Math.ceil(w / tw) + 1) * (Math.ceil(h / th) + 1)
+}
+
+export function ledTiles(
+  w: number,
+  h: number,
+  opts: LedTileOptions,
+  regions: Region[],
+  view: { x: number; y: number } = { x: 0, y: 0 },
+  scale = 1,
+): Tile[] {
+  if (opts.source === 'cabinets' && regions.some((r) => r.order !== undefined)) {
+    return cabinetTiles(regions).map((t) => ({
+      ...t,
+      x: t.x * scale,
+      y: t.y * scale,
+      width: t.width * scale,
+      height: t.height * scale,
+    }))
+  }
+  if (uniformTileCount(w, h, opts, scale) > MAX_TILES) return []
+  const tw = Math.max(1, opts.tileWidthPx * scale)
+  const th = Math.max(1, opts.tileHeightPx * scale)
+  const ox = opts.originXPx * scale
+  const oy = opts.originYPx * scale
+  const c0 = Math.floor((view.x - ox) / tw)
+  const r0 = Math.floor((view.y - oy) / th)
+  const tiles: Tile[] = []
+  for (let row = r0; oy + row * th - view.y < h; row++) {
+    for (let col = c0; ox + col * tw - view.x < w; col++) {
+      const x = ox + col * tw - view.x
+      const y = oy + row * th - view.y
+      if (x + tw <= 0 || y + th <= 0) continue
+      tiles.push({ x, y, width: tw, height: th, col, row, ref: `${columnRef(Math.max(0, col))}${row + 1}` })
+    }
+  }
+  return tiles
+}
+
 function uniformTiles(w: number, h: number, opts: LedTileOptions): Tile[] {
   const tw = Math.max(1, Math.round(opts.tileWidthPx))
   const th = Math.max(1, Math.round(opts.tileHeightPx))

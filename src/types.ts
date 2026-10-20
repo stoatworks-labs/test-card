@@ -86,6 +86,15 @@ export type Output = {
   notes: string[]
   /** Excluded from render/export without being deleted. */
   enabled: boolean
+  /**
+   * Physical size of one pixel, in millimetres — the LED pixel pitch, or a
+   * projected image's width divided by its raster. Only the scale-aware
+   * patterns read it. Missing means "not known", and those patterns then fall
+   * back to `ScaleOptions.pitchMm` and say on the image that they did.
+   */
+  pitchMm?: number
+  /** Where `pitchMm` came from: a design file, or typed in. */
+  pitchSource?: 'imported' | 'manual'
 }
 
 /** What an importer returns. */
@@ -113,6 +122,17 @@ export type PatternKind =
   | 'solid'
   | 'greyscale'
   | 'pixel-check'
+  // Scale-aware: drawn at real size from the output's pixel pitch.
+  | 'rulers'
+  | 'bananas'
+  | 'dinosaurs'
+  // Novelty, some of them moving.
+  | 'hamsters'
+  | 'ocean'
+  | 'dino-scroll'
+  | 'volcano'
+  | 'broken-wall'
+  | 'image'
 
 /**
  * Output level range.
@@ -234,6 +254,145 @@ export type PixelCheckOptions = {
   lineBursts: boolean
 }
 
+/**
+ * Physical scale, shared by every pattern that draws something at real size.
+ *
+ * `pitchMm` is only the fallback for an output that carries no pitch of its
+ * own. A pattern drawn with it stamps "pitch assumed" on the image, because a
+ * life-size banana at the wrong pitch is a confidently wrong banana.
+ */
+export type ScaleOptions = {
+  pitchMm: number
+  units: 'metric' | 'imperial'
+  /** Height of the surface's bottom edge above the floor. Feet stand on the floor. */
+  floorMm: number
+  /**
+   * Treat the outputs as windows onto one surface, placed by their position in
+   * the composition, so a scene or a ruler carries on across the join between
+   * two processors instead of starting again in each.
+   */
+  span: boolean
+}
+
+/**
+ * Moving patterns. Every one of them is periodic in exactly `seconds`, so the
+ * exported MP4 loops with no seam: frame N would be frame 0 again.
+ */
+export type AnimationOptions = {
+  seconds: number
+  /** Frames per second as a ratio, so 29.97 is exactly 30000/1001. */
+  fps: '24' | '25' | '30' | '50' | '60' | '23.976' | '29.97' | '59.94'
+  /** Which moment a PNG of a moving pattern shows. */
+  stillAtSeconds: number
+  /** Megabits per second for the MP4. 0 = pick from the raster. */
+  bitrateMbps: number
+}
+
+export type RulerOptions = {
+  top: boolean
+  left: boolean
+  bottom: boolean
+  right: boolean
+  /** Faint lines across the field at every labelled distance. */
+  gridLines: boolean
+  /** Measure the vertical rulers up from the floor rather than down from the top. */
+  fromFloor: boolean
+  background: string
+  colour: string
+}
+
+export type BananaOptions = {
+  /** One bunch in the middle, or one bunch on every LED tile. */
+  layout: 'once' | 'per-tile'
+  /** State the wall's size in bananas. */
+  caption: boolean
+  background: string
+}
+
+export type DinosaurId =
+  | 'compsognathus'
+  | 'velociraptor'
+  | 'ankylosaurus'
+  | 'triceratops'
+  | 'stegosaurus'
+  | 'tyrannosaurus'
+  | 'brachiosaurus'
+
+export type DinosaurOptions = {
+  /** In lineup order, left to right. */
+  species: DinosaurId[]
+  /** Metres of lineup scrolled past the left edge. Negative moves it right. */
+  panM: number
+  /** Gap between animals, in metres. */
+  gapM: number
+  human: boolean
+  banana: boolean
+  labels: boolean
+  /** A floor line and a sky, or just the animals on a flat colour. */
+  scenery: boolean
+  background: string
+}
+
+export type HamsterOptions = {
+  /** Beats per minute. The sprites change pose on every half beat. */
+  bpm: number
+}
+
+export type OceanOptions = {
+  seed: number
+  time: 'day' | 'sunset' | 'night'
+  /** 0.5 = calm, 1 = normal, 2 = rough. */
+  swell: number
+}
+
+export type SceneOptions = {
+  seed: number
+  /** How many screen widths the nearest ground passes per loop. */
+  speed: number
+}
+
+export type BrokenFault =
+  | 'dead-tile'
+  | 'dead-module'
+  | 'calibration'
+  | 'batch'
+  | 'missing-channel'
+  | 'colour-order'
+  | 'scan-lines'
+  | 'dead-pixels'
+  | 'swapped'
+  | 'offset'
+  | 'upside-down'
+  | 'seams'
+  | 'frozen'
+  | 'flicker'
+  | 'noise'
+
+export type BrokenWallOptions = {
+  /** The pattern the faults are applied to. */
+  base: Exclude<PatternKind, 'broken-wall'>
+  seed: number
+  /** Percentage of tiles that get something wrong with them. */
+  faultyPct: number
+  faults: BrokenFault[]
+  /** Modules per cabinet, across and down. Dead modules and scan faults use them. */
+  modulesX: number
+  modulesY: number
+  /** Write what is wrong on each faulty tile. Good for training, bad for a client demo. */
+  labels: boolean
+}
+
+export type ImageFit = 'contain' | 'cover' | 'stretch' | 'native' | 'tile'
+
+export type ImageOptions = {
+  fit: ImageFit
+  /** Where the image sits when it does not fill the raster, or which part survives a crop. */
+  anchorX: 'left' | 'centre' | 'right'
+  anchorY: 'top' | 'centre' | 'bottom'
+  background: string
+  smoothing: boolean
+}
+
 /** Text burned into the corner of every pattern. */
 export type OverlayOptions = {
   enabled: boolean
@@ -271,6 +430,16 @@ export type PatternSettings = {
   solid: SolidOptions
   greyscale: GreyscaleOptions
   pixelCheck: PixelCheckOptions
+  scale: ScaleOptions
+  animation: AnimationOptions
+  rulers: RulerOptions
+  bananas: BananaOptions
+  dinosaurs: DinosaurOptions
+  hamsters: HamsterOptions
+  ocean: OceanOptions
+  scene: SceneOptions
+  broken: BrokenWallOptions
+  image: ImageOptions
   overlay: OverlayOptions
   regionOverlay: RegionOverlayOptions
 }

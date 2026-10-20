@@ -1,14 +1,16 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 88 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 215 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
 > sound. The importers are tested against real files, and the whole path has been driven end to
-> end in a browser; the Verification section has the details. **No image it produces has been
-> played out to a real projector, LED processor or display and measured.** The patterns are
-> correct as pixels; what a screen does with them is something this can't tell you.
+> end in a browser; the Verification section has the details. The MP4 loops are made in Chrome
+> and read back by ffmpeg, which decodes the bars to within one code value. **No image or loop it
+> produces has been played out to a real projector, LED processor or display and measured, and no
+> MP4 has been played in Resolume yet.** The patterns are correct as pixels; what a screen does
+> with them is something this can't tell you.
 
 Test patterns for every physical output in a show, made from the file that already describes the
 outputs.
@@ -17,6 +19,10 @@ Import a **Resolume advanced output**, a **Pixel Peeker** wall or a **Blend Calc
 and get one PNG per physical output at that output's exact raster, or a single composition-sized
 image that proves the output map is what you think it is. Everything runs in the browser, and
 nothing is uploaded.
+
+It also does the other sort of test pattern: the one you put up while the client is walking in.
+Rulers that measure the wall in metres, a bunch of bananas for scale, life-size dinosaurs that
+don't fit, a hamster on every LED tile, and a few moving scenes that export as seamless MP4 loops.
 
 ![Test Card with one 1920 × 1080 output: SMPTE RP 219 bars with the output name and resolution burnt in](docs/screenshots/test-card.png)
 
@@ -35,14 +41,70 @@ nothing is uploaded.
 | **Greyscale** | Continuous ramp or stepped wedge, optionally split into R, G, B and neutral |
 | **Pixel check** | 1px checkerboard and line bursts. If it renders as flat grey on the real output, something in the chain is scaling |
 
+### Scale and novelty
+
+![Six of the new patterns: the sea at sunset, the scrolling Cretaceous, the volcano and comet, a life-size Tyrannosaurus too big for its wall, a hamster on every cabinet, and a broken wall](docs/screenshots/novelty.jpg)
+
+<sub>Previews of a 3200 × 1800 Pixel Peeker wall at 2.5 mm. The Tyrannosaurus is 12.3 m long and the wall is 8 m wide, so you get most of him.</sub>
+
+| Pattern | What it is for |
+|---|---|
+| **Rulers** | Tape measures along the edges, in metric or imperial, worked out from the pixel pitch. Each tick lands on the pixel whose centre is nearest, so it's never more than half a pitch out, and the pattern says what that is. Can read height off the floor |
+| **Banana for scale** | A life-size bunch of five 19 cm bananas, once in the middle or on every LED tile, with the wall's size given in bananas. Someone was always going to ask |
+| **Life-size dinosaurs** | Seven of them at their usual quoted sizes, from a 1 m Compsognathus to a 22 m Brachiosaurus, plus a 1.75 m person and a banana. Feet on the floor, pan along the line-up, and anything bigger than the wall is cut off by its edges |
+| **Hamster dance** | One dancing pixel-art hamster per LED tile, in time to a tempo you set. A nod to a certain 1998 web page; the hamsters are my own |
+| **Ocean waves** | Generative sea, day, sunset or night, rolling in towards you. Moves |
+| **Dinosaur scroll** | A side-scrolling Cretaceous: mountains, palms, ferns, and dinosaurs walking with their feet planted on the ground that scrolls under them. Moves |
+| **Volcano and comet** | An eruption, a comet on its way in, and the dinosaurs who've noticed. Moves |
+| **Broken wall** | Any other pattern with a share of its tiles broken: dead tiles and modules, calibration and batch mismatches, a lost colour, the wrong RGB order, scan faults, dead pixels, mapping errors, an upside-down module, seams, a frozen tile, flicker and data noise. Optionally labelled, for training |
+| **Your image** | Any picture, fitted, filled and cropped, stretched, 1:1, or tiled, anchored where you like. Kept in your browser across a refresh and never uploaded |
+
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
 draw the imported slice or port outlines on top.
+
+## Physical scale
+
+The rulers, the bananas and the dinosaurs need to know how big a pixel is. A Pixel Peeker import
+brings the wall's pitch with it. Anything else, type it in under **Edit** on the output, as a pitch
+or as the image's width in metres (which is the easy way for a projector). An output with no pitch
+is drawn at a fallback and says **pitch assumed** across the bottom, because a life-size banana at
+the wrong pitch is still the wrong size, just more confidently.
+
+**Carry on across outputs** treats the outputs as windows onto one surface, placed by where they sit
+in the composition. A ruler then runs the length of the wall instead of starting again at each
+processor, the sea doesn't have a seam between two projectors, and the edge-blend overlaps get the
+same pixels from both sides. It does nothing to the measurement patterns: bars and grids belong to
+one output's raster. LED tiles stay with their own output too, since that's where its cabinets
+start. An output whose region in the composition is stretched to a different shape isn't spanned,
+because nothing can be life-size both ways at once on a stretched picture; it gets its own copy.
+
+## Moving patterns and MP4 loops
+
+The ocean, the scroll, the volcano and the hamsters move, and so does a broken wall over any of
+them (or with flicker or data noise in it). They animate in the preview and export as **H.264 MP4
+loops**, encoded in the browser, one per output or one for the composition. A PNG of any frame is
+still there.
+
+The loop is fitted to whole frames first, and everything in it does a whole number of cycles in
+that time: each wave, each scrolling layer, each stride and wingbeat. Frame N would be frame 0, so
+the file goes round without a seam. The encoder is warmed up on the loop's last second before frame
+0, because otherwise it codes the first frame differently from all the others and the wrap shows.
+
+Colour is converted here with the Rec. 709 matrix into limited-range 4:2:0, and the file is
+labelled as such. The level range means what it does for a PNG: legal-range bars keep their
+sub-black and super-white in the video's footroom and headroom.
+
+It needs a browser that can encode video (WebCodecs), an even width and height, and a raster inside
+what that browser's H.264 encoder will take. I've only tried it in Chrome, where on a Mac that's 4K
+and 7680 × 1080 but not 8192 × 2160. Edge should behave the same; Safari and Firefox have WebCodecs
+too, but I haven't tried either. It tells you before it starts if it can't.
 
 ## Two ways to render
 
 - **One PNG per output:** each file at that output's native raster. One output downloads as a bare
   PNG; several download as a ZIP with a `manifest.txt` recording which file is which output, the
-  level range used, and any raster the app had to infer.
+  level range used, any raster the app had to infer, and for the scale patterns each output's
+  pitch and whether it was a guess. Moving patterns can do the same with MP4s.
 - **Single composition canvas:** one image at composition size with every output's region drawn
   and labelled. Play it through Resolume and each physical output should light up showing its own
   name. That's the fastest proof the advanced output map matches what you think it does, and you
@@ -103,6 +165,23 @@ for the invariants and the traps.
 - **End to end**, driven in a browser: a real Blend Calc export imported, six 1920x1200 PNGs
   rendered and packed, and the resulting ZIP unpacked and its PNG headers checked. Bar colours and
   pluge values were sampled off the canvas and confirmed against the standard.
+- **Real size:** the drawings are held to their sizes by the tests. Each dinosaur is its quoted
+  length nose to tail within 3.5% and its stated height within 6%, the banana is 190 mm along its
+  curve, and the person is 1.75 m. Ruler ticks are tested to sit within half a pitch of true, on a
+  wall, across a span and up from the floor.
+- **MP4 writer:** a real libx264 stream (`scripts/make-h264-fixture.sh`) is muxed and read back:
+  the boxes by the tests, and by ffprobe and ffmpeg where installed, which decode it to exactly
+  the frames the raw stream decodes to.
+- **Loops, made in Chrome 152:** 75% bars encoded from full- and legal-range pictures both decoded
+  within one code value of the standard Y′CbCr bar values. Ocean, scroll, volcano, hamster and
+  broken-wall loops are pixel-identical at t = 0 and t = T before encoding, and after it the step
+  from the last frame back to the first is within about a tenth of a grey level of the step into
+  any other keyframe of the same loop.
+- **Spanning:** the six-projector Blend Calc export rendered per output, with every surface pattern
+  matching in the edge-blend overlaps apart from at most nine antialiased edge pixels.
+- **Reviewed:** an independent review of the whole change before it landed found twelve problems,
+  from a volcano that grew a different forest on each output to an MP4 export that crawled in a
+  background tab. All twelve were fixed and the checks above re-run afterwards.
 
 <!-- selfhost:start -->
 ## Run your own copy

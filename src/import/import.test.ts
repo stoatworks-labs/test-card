@@ -159,6 +159,12 @@ describe('Pixel Peeker interchange', () => {
     expect(out.rasterSource).toBe('computed')
   })
 
+  it('takes the wall’s pixel pitch, for the patterns drawn at real size', () => {
+    const out = parsePixelPeekerInterchange(doc).outputs[0]!
+    expect(out.pitchMm).toBe(2.5)
+    expect(out.pitchSource).toBe('imported')
+  })
+
   it('carries every cabinet through as a region, with chain order', () => {
     const out = parsePixelPeekerInterchange(doc).outputs[0]!
     const cabinets = out.regions.filter((r) => r.order !== undefined)

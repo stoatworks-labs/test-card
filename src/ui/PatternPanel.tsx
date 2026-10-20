@@ -1,7 +1,34 @@
 import type { PatternKind, PatternSettings } from '../types'
-import { PATTERN_LABELS } from '../patterns/render'
+import { PATTERN_LABELS, spansSurface } from '../patterns/render'
+import { isAnimated, isScaleAware } from '../patterns/env'
+import type { ImageInfo } from '../state/store'
+import {
+  BananaControls,
+  BrokenControls,
+  DinosaurControls,
+  HamsterControls,
+  ImageControls,
+  LoopControls,
+  OceanControls,
+  RulerControls,
+  ScaleControls,
+  SceneControls,
+  TileControls,
+} from './NoveltyControls'
 
 type Patch = (patch: Record<string, unknown>) => void
+
+const NOVELTY: { kind: PatternKind; hint: string }[] = [
+  { kind: 'rulers', hint: 'Real distances, from the pixel pitch' },
+  { kind: 'bananas', hint: 'A life-size bunch, once or per tile' },
+  { kind: 'dinosaurs', hint: 'Seven dinosaurs at real size' },
+  { kind: 'hamsters', hint: 'One dancing hamster per LED tile' },
+  { kind: 'ocean', hint: 'Generative waves, a seamless loop' },
+  { kind: 'dino-scroll', hint: 'Endless parallax Cretaceous' },
+  { kind: 'volcano', hint: 'Eruption, comet, silhouettes' },
+  { kind: 'broken-wall', hint: 'Dead modules, bad calibration…' },
+  { kind: 'image', hint: 'Your picture, fitted or cropped' },
+]
 
 const KINDS: { kind: PatternKind; hint: string }[] = [
   { kind: 'smpte-rp219', hint: 'Standard bars, pluge and luma ramp' },
@@ -19,31 +46,76 @@ export function PatternPanel({
   patch,
   hasRegions,
   hasCabinets,
+  outputPitch,
+  surfaceWidthM,
+  image,
+  onImage,
 }: {
   settings: PatternSettings
   patch: (p: Record<string, unknown>) => void
   hasRegions: boolean
   hasCabinets: boolean
+  outputPitch?: number
+  surfaceWidthM: number
+  image: ImageInfo | null
+  onImage: (info: Omit<ImageInfo, 'version'> | null) => void
 }) {
   const sub = (key: keyof PatternSettings): Patch => (p) => patch({ [key]: p })
+  const kind = settings.kind
+  const perTile =
+    kind === 'hamsters' || kind === 'broken-wall' || (kind === 'bananas' && settings.bananas.layout === 'per-tile')
+  const surface = spansSurface({ ...settings, scale: { ...settings.scale, span: true } })
+
+  const grid = (items: typeof KINDS) => (
+    <div className="kind-grid">
+      {items.map(({ kind: k, hint }) => (
+        <button
+          key={k}
+          className={kind === k ? 'kind active' : 'kind'}
+          onClick={() => patch({ kind: k })}
+          title={hint}
+        >
+          <span className="kind-name">{PATTERN_LABELS[k]}</span>
+          <span className="kind-hint">{hint}</span>
+        </button>
+      ))}
+    </div>
+  )
 
   return (
     <div className="panel">
       <h2>Pattern</h2>
 
-      <div className="kind-grid">
-        {KINDS.map(({ kind, hint }) => (
-          <button
-            key={kind}
-            className={settings.kind === kind ? 'kind active' : 'kind'}
-            onClick={() => patch({ kind })}
-            title={hint}
-          >
-            <span className="kind-name">{PATTERN_LABELS[kind]}</span>
-            <span className="kind-hint">{hint}</span>
-          </button>
-        ))}
-      </div>
+      {grid(KINDS)}
+      <h3 className="kind-group">Scale and novelty</h3>
+      {grid(NOVELTY)}
+
+      {kind === 'rulers' ? <RulerControls opts={settings.rulers} patch={sub('rulers')} /> : null}
+      {kind === 'bananas' ? <BananaControls opts={settings.bananas} patch={sub('bananas')} /> : null}
+      {kind === 'dinosaurs' ? (
+        <DinosaurControls opts={settings.dinosaurs} patch={sub('dinosaurs')} surfaceWidthM={surfaceWidthM} />
+      ) : null}
+      {kind === 'hamsters' ? <HamsterControls opts={settings.hamsters} patch={sub('hamsters')} /> : null}
+      {kind === 'ocean' ? <OceanControls opts={settings.ocean} patch={sub('ocean')} /> : null}
+      {kind === 'dino-scroll' || kind === 'volcano' ? (
+        <SceneControls kind={kind} opts={settings.scene} patch={sub('scene')} />
+      ) : null}
+      {kind === 'broken-wall' ? <BrokenControls opts={settings.broken} patch={sub('broken')} /> : null}
+      {kind === 'image' ? (
+        <ImageControls opts={settings.image} patch={sub('image')} image={image} onImage={onImage} />
+      ) : null}
+      {perTile ? <TileControls opts={settings.led} patch={sub('led')} hasCabinets={hasCabinets} /> : null}
+      {isScaleAware(settings) || surface ? (
+        <ScaleControls
+          opts={settings.scale}
+          patch={sub('scale')}
+          outputPitch={outputPitch}
+          showPitch={isScaleAware(settings)}
+          showFloor={kind === 'dinosaurs' || (kind === 'rulers' && settings.rulers.fromFloor)}
+          showSpan={surface}
+        />
+      ) : null}
+      {isAnimated(settings) ? <LoopControls opts={settings.animation} patch={sub('animation')} /> : null}
 
       <Field label="Level range">
         <select

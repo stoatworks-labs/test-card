@@ -19,9 +19,12 @@ nothing is uploaded.
 > **real files**, not hand-written fixtures, and the whole path has been driven end to end in a
 > browser.
 >
-> **No image it produces has been played out to a real projector, LED processor or display and
-> measured.** The patterns are correct as pixels; what a screen does with them is something this
-> can't tell you.
+> The MP4 loops are made in Chrome and read back by ffmpeg: 75% bars come back within one code
+> value of the standard, and the loops go round with no seam.
+>
+> **No image or loop it produces has been played out to a real projector, LED processor or display
+> and measured, and no MP4 has been played in Resolume yet.** The patterns are correct as pixels;
+> what a screen does with them is something this can't tell you.
 >
 > This codebase was created with AI assistance, directed and reviewed by a human author.
 
@@ -42,6 +45,69 @@ nothing is uploaded.
 
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
 draw the imported slice or port outlines on top.
+
+### Scale and novelty
+
+The other sort of test pattern: the one that's up while the client walks in, or while you're
+explaining to someone what a dead module looks like.
+
+![Six of the new patterns: the sea at sunset, the scrolling Cretaceous, the volcano and comet, a life-size Tyrannosaurus too big for its wall, a hamster on every cabinet, and a broken wall](screenshots/novelty.jpg)
+
+| Pattern | What it is for |
+|---|---|
+| **Rulers** | Tape measures along the edges, metric or imperial, from the pixel pitch. Each tick is within half a pitch of true, and the pattern says how much that is. The side rulers can read height off the floor. |
+| **Banana for scale** | A life-size bunch of five 19 cm bananas, once or on every LED tile, with the wall's size in bananas. |
+| **Life-size dinosaurs** | Seven dinosaurs at their usual quoted sizes, a 1.75 m person and a banana, standing on the floor in a line. **Pan** along it, or pick one under **Centre on**. Anything bigger than the wall is cut off by its edges. |
+| **Hamster dance** | One dancing pixel-art hamster per LED tile, at a tempo you set. Moves. |
+| **Ocean waves** | A generative sea rolling in, day, sunset or night. **Another** picks a different sea. Moves. |
+| **Dinosaur scroll** | A side-scrolling Cretaceous with dinosaurs walking on the ground that scrolls under them. Moves. |
+| **Volcano and comet** | An eruption, an incoming comet, and some worried silhouettes. Moves. |
+| **Broken wall** | Another pattern with a share of its tiles broken in fifteen different ways, from a dead tile to a wrong RGB order. Tick **Label each fault** to name them on the wall. |
+| **Your image** | Any picture, fitted, filled and cropped, stretched, 1:1 or tiled. It stays in this browser across a refresh and is never uploaded. |
+
+The per-tile patterns (bananas per tile, hamsters, the broken wall) use the same tiles as the
+**LED tiles** pattern: a uniform size you state, or the cabinets from a Pixel Peeker import.
+
+---
+
+## Physical scale: give it a pitch
+
+The rulers, the bananas and the dinosaurs are drawn at real size, so they need to know how big a
+pixel is.
+
+- A **Pixel Peeker** import brings the wall's pitch with it.
+- For anything else, open **Edit** on the output and type the **pixel pitch** in millimetres, or
+  the image's **width in metres** and let it work the pitch out. For a projector, the width is the
+  one you'll know.
+- An output with neither is drawn at the **fallback pitch** in the pattern panel and says **pitch
+  assumed** across the bottom. The ZIP manifest lists each output's pitch and marks the guesses.
+
+**Bottom edge above the floor** puts the dinosaurs' feet on the real floor rather than on the
+bottom of the wall. A wall flown a metre up shows their knees, not their toes.
+
+**Carry on across outputs** treats the outputs as windows onto one surface, placed by where they sit
+in the composition, so a ruler runs the whole wall and the sea has no seam between two projectors.
+It only applies to the scale and novelty patterns; bars and grids always belong to one output, and
+LED tiles stay with the output whose cabinets they are. An output stretched to a different shape in
+the composition isn't spanned and gets its own copy instead.
+
+---
+
+## Moving patterns: MP4 loops
+
+The moving patterns animate in the preview (**Pause** freezes it on the frame the PNG will use) and
+get a **Download MP4 loop** button. Set the length and frame rate under **Loop**.
+
+- The loop goes round with no seam: everything in it does a whole number of cycles in the loop's
+  exact length, which is a whole number of frames.
+- It's H.264, encoded in your browser. That needs WebCodecs; I've only tried it in Chrome.
+- Colour is BT.709, limited range, converted here and labelled in the file. Legal-range bars keep
+  their sub-black and super-white.
+- **Bitrate** at 0 picks a generous one for the raster. Set your own if the files are too big.
+- Big rasters take a while: the export shows its progress and has a **Cancel**. It keeps going at
+  the same speed behind another tab.
+- A loop that would come to more than about 1 GB is refused before it starts, since the whole file
+  has to fit in the browser tab's memory.
 
 ---
 
@@ -103,3 +169,10 @@ You can also just add outputs by hand.
 | **The pluge patch is invisible** | Full-range levels clip it to black. Render at legal range for an SDI chain. |
 | **The bars look washed out** | Legal-range content on a full-range display. Correct, not broken. |
 | **Blend Calc import asks for numbers** | The projector resolution and the solved overlap are not in that file. Bring its Resolume XML instead. |
+| **"Pitch assumed" across the bottom** | The output has no pixel pitch. Set it under **Edit**, or the life-size things are only as right as the fallback. |
+| **The dinosaurs' feet are missing** | The wall's bottom edge is off the floor, and so are their feet. Set **Bottom edge above the floor** to 0 to see them. |
+| **No MP4 button** | The pattern doesn't move. A broken wall moves if its picture does, or with flicker or data noise ticked. |
+| **"H.264 needs an even width and height"** | 4:2:0 video can't carry an odd raster. Export PNGs, or check the raster. |
+| **"The browser's H.264 encoder will not take…"** | The raster is bigger than this browser will encode. Export that output as PNGs, or split it. |
+| **"That loop would be about … GB"** | Too long, too big or too high a bitrate to build in a tab. Shorten the loop or lower the bitrate. |
+| **The image has gone** | It's kept in this browser's storage. Another browser, a private window or cleared site data won't have it. |

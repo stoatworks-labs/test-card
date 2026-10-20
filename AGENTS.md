@@ -28,7 +28,20 @@ src/lib/zip.ts        hand-rolled store-only ZIP writer
 src/lib/export.ts     filenames, manifest, download
 src/patterns/rp219.ts SMPTE bar layout + colours (pure, no canvas)
 src/patterns/draw.ts  the painters. 1 unit = 1 raster pixel, always
-src/patterns/render.ts orchestration, canvas limits, PNG encode, composition mode
+src/patterns/render.ts orchestration, canvas limits, PNG encode, composition mode,
+                      and makeEnv(): time, pitch, and where a canvas sits on a span
+src/patterns/env.ts   PaintEnv — what a painter is told besides its size
+src/patterns/scale.ts pitch resolution, ruler ticks (pure)
+src/patterns/loop.ts  loop timing in whole frames, whole cycles per loop (pure)
+src/patterns/random.ts seeded randomness; the only randomness patterns may use
+src/patterns/novelty.ts rulers, bananas, life-size dinosaurs, hamsters
+src/patterns/scenes.ts ocean, dinosaur scroll, volcano — the moving scenes
+src/patterns/broken.ts the broken wall: fault choice and pixel ops (pure) + painter
+src/patterns/image.ts your image, fitted (pure placement) + painter
+src/patterns/art/*.ts the artwork, as polygons: shapes, bananas, dinosaurs,
+                      hamster sprites, scenery. Only shapes.fillShapes touches a canvas
+src/lib/mp4.ts        hand-rolled MP4 writer, one H.264 track
+src/lib/video.ts      WebCodecs encode loop and the RGB -> Y′CbCr 4:2:0 conversion
 src/import/*.ts       one file per source format + detect.ts to sniff
 src/state/            zustand store, persisted to localStorage
 src/ui/               React
@@ -71,6 +84,55 @@ are. Importing a file that needs them is refused (Pixel Peeker project) or asks
 the user (Blend Calc raster). A vendored copy drifts and then produces confidently
 wrong tile sizes.
 
+**7. Artwork is geometry too.**
+A banana, a dinosaur or a mountain range is a list of polygons from a pure
+function, built in real units (millimetres for the banana, metres for the
+dinosaurs). The tests hold them to their sizes: each dinosaur within 3.5% of its
+quoted length and 6% of its stated height, the banana 190 mm along its curve. If
+you change a drawing, run the tests as well as looking at it: a nicer-looking
+Tyrannosaurus that is 14 m long is a regression. When you convert shapes between
+units with `mapShapes`, pass the scale as `strokeScale` as well, or a 1.2 mm
+stroke becomes 1.2 m.
+
+**8. Moving patterns are periodic in the loop, exactly.**
+Everything that moves does a whole number of cycles in `loopSeconds` (use
+`wholeCycles` and `phase`), and everything that scrolls moves a whole number of
+its own periods. Frame N must be pixel-identical to frame 0 — that is what makes
+the MP4 seamless — and the tests check it for the sea, the layers and the
+hamsters. A speed slider that produces 3.4 cycles per loop is a seam once a
+loop, forever.
+
+**9. No `Math.random` in `src/patterns/`.**
+A pattern is a function of its settings, its output and the time. Use the
+seeded generator in `random.ts`. The preview and the export must agree, frame N
+must be the same every time it is asked for, and two outputs of one span must
+agree on where the trees are. Draw every random number for a thing BEFORE
+skipping it as off-screen: a `continue` ahead of the draws makes the sequence
+depend on where the canvas sits, and the volcano grew a different forest on
+each output until review caught it.
+
+**10. MP4 colour is converted here, never by the encoder.**
+`rgbaToI420` applies Rec.709 into limited-range 4:2:0 and the file's `colr` box
+says so. Handing the encoder RGBA leaves the matrix to the browser — the same
+trap as ffmpeg's rgb24 below. The level range is honoured: `canvasRange()` says
+whether the canvas holds 0–255 or 16–235 codes, and only the measurement
+patterns that follow the level setting can be legal range; artwork is always
+full.
+
+**11. On a span, surface things go on the surface.**
+With "carry on across outputs", the scale and novelty patterns are drawn in
+composition coordinates and each output is a window onto them. Rulers, labels,
+captions and the size readout are placed on the SURFACE's edges and centre, so
+two projectors blending over each other draw the same pixels in the overlap
+(measured: at most nine antialiased edge pixels differ across the Blend Calc
+fixture). Facts about one output — "pitch assumed" — stay on that output.
+Sample curves on a grid anchored to the world (or, for something that scrolls,
+to the thing itself), not the canvas, or the antialiasing differs at the join
+and a scrolling peak shimmers. LED tiles are NOT surface things: they belong to
+the output that drives them and start at its own origin. An output whose
+composition region has a different aspect from its raster is not spanned at
+all (`spanPlace`); on a stretched mapping nothing is life-size both ways.
+
 ## Traps that have already cost time
 
 **ffmpeg's `rgb24` output uses the wrong matrix.** `smptehdbars -pix_fmt rgb24`
@@ -106,10 +168,41 @@ as two grey rows. `crispLine()` offsets by half a pixel for odd widths; this
 matters more here than in most drawing code, because the point of an alignment
 pattern is that 1px is exactly 1px.
 
+**Chrome's H.264 rate control codes the first frame of a stream differently.**
+In a loop the first frame is the seam. `encodeLoop` encodes the loop's last
+second first, throws it away, and starts the loop proper on a forced keyframe.
+A fixed quantiser (`bitrateMode: 'quantizer'`) fixed it too, but in Chrome 152
+on a Mac it fell back to the software encoder and ran ten times slower.
+
+**Chrome's encoder refuses odd rasters and anything past its level.** 4:2:0
+needs even sides, and on a Mac 8192x2160 is refused where 7680x1080 is fine.
+`videoProblem()` and `pickConfig()` say so before any frame is rendered; never
+let it fail at frame 900.
+
+**A hidden tab's timers run once a second.** Chrome throttles `setTimeout` in a
+background tab (to once a minute after five minutes), so an encode loop that
+yields with it turns a 300-frame export into an hour when the user tabs away.
+`encodeLoop` yields with a `MessageChannel` instead, for pacing and for
+back-pressure alike. (Waiting on the encoder's `dequeue` event loses a race
+when it fires before the listener is attached.) Measured: the same loop takes
+the same time behind another tab as in front. A minimised window is untested.
+
+**A loop is held whole in memory.** Every encoded frame stays until the file is
+written, then is copied into the MP4 and again into the download. `encodeLoop`
+refuses anything estimated over `MAX_LOOP_BYTES` (1 GiB) before frame 0.
+
+**Vite caches a dynamically imported module across edits.** Driving the encoder
+from the browser console with `await import('/src/lib/video.ts')` keeps handing
+back the version from before your last edit until the page is reloaded. Two
+"different" runs that produce byte-identical files are the giveaway.
+
 ## Testing
 
-`npm test` — 88 tests, all offline. ffmpeg is **not** required: the RP 219
-reference is committed as JSON.
+`npm test` — 215 tests, all offline. ffmpeg is **not** required: the RP 219
+reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
+to read a muxed file skip when they are not installed (they run on this Mac).
+The H.264 they mux is a committed libx264 stream, regenerated with
+`scripts/make-h264-fixture.sh`.
 
 The importer suite runs against real files in `test/fixtures/`, none of them
 hand-written:

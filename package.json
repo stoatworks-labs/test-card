@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Generate SMPTE bars, grids, alignment and LED tile test patterns for every physical output in a Resolume advanced output, a Pixel Peeker wall or a Blend Calc array.",
+  "description": "Generate SMPTE bars, grids, alignment and LED tile test patterns for every physical output in a Resolume advanced output, a Pixel Peeker wall or a Blend Calc array, plus scale-aware and moving patterns exported as seamless MP4 loops.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",

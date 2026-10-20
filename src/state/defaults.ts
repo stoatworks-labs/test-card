@@ -1,4 +1,6 @@
 import type { PatternSettings } from '../types'
+import { ALL_FAULTS } from '../patterns/broken'
+import { LINEUP_ORDER } from '../patterns/art/dinosaurs'
 
 /**
  * Starting settings.
@@ -63,6 +65,54 @@ export const DEFAULT_SETTINGS: PatternSettings = {
   greyscale: { steps: 11, vertical: false, perChannel: false },
 
   pixelCheck: { cellPx: 1, lineBursts: true },
+
+  // 2.6 mm is as good a guess as any for a touring wall, and every pattern
+  // drawn with it says on the image that it is a guess.
+  scale: { pitchMm: 2.6, units: 'metric', floorMm: 0, span: true },
+
+  animation: { seconds: 10, fps: '30', stillAtSeconds: 0, bitrateMbps: 0 },
+
+  rulers: {
+    top: true,
+    left: true,
+    bottom: false,
+    right: false,
+    gridLines: true,
+    fromFloor: false,
+    background: '#101418',
+    colour: '#ffffff',
+  },
+
+  bananas: { layout: 'once', caption: true, background: '#1d2b3a' },
+
+  dinosaurs: {
+    species: [...LINEUP_ORDER],
+    panM: 0,
+    gapM: 1.5,
+    human: true,
+    banana: true,
+    labels: true,
+    scenery: true,
+    background: '#000000',
+  },
+
+  hamsters: { bpm: 120 },
+
+  ocean: { seed: 1, time: 'sunset', swell: 1 },
+
+  scene: { seed: 1, speed: 3 },
+
+  broken: {
+    base: 'ocean',
+    seed: 1,
+    faultyPct: 15,
+    faults: [...ALL_FAULTS],
+    modulesX: 2,
+    modulesY: 2,
+    labels: false,
+  },
+
+  image: { fit: 'contain', anchorX: 'centre', anchorY: 'centre', background: '#000000', smoothing: true },
 
   overlay: {
     enabled: true,

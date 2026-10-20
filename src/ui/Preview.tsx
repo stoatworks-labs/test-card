@@ -20,7 +20,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { Output, PatternSettings, RenderMode } from '../types'
-import { canvasLimitProblem, renderComposition, renderOutputTo } from '../patterns/render'
+import { canvasLimitProblem, renderComposition, renderCompositionTo, renderOutputTo } from '../patterns/render'
+import { isAnimated } from '../patterns/env'
+import { loopTiming } from '../patterns/loop'
 
 const MAX_PREVIEW_PX = 1400
 
@@ -30,16 +32,22 @@ export function Preview({
   composition,
   mode,
   settings,
+  imageVersion,
 }: {
   output: Output | null
   outputs: Output[]
   composition?: { widthPx: number; heightPx: number }
   mode: RenderMode
   settings: PatternSettings
+  /** Bumped when the loaded image changes, so the preview redraws. */
+  imageVersion: number
 }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [scale, setScale] = useState(1)
+  const [playing, setPlaying] = useState(true)
+  const clock = useRef<HTMLSpanElement>(null)
+  const animated = isAnimated(settings)
 
   const target =
     mode === 'composition'
@@ -71,22 +79,45 @@ export function Preview({
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    if (mode === 'composition' && composition) {
-      // renderComposition makes its own full-size canvas, so blit it down.
-      const full = renderComposition(outputs, composition, settings)
-      ctx.drawImage(full, 0, 0, canvas.width, canvas.height)
+    const draw = (t?: number) => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      if (mode === 'composition' && composition) {
+        if (t === undefined) {
+          // A still: renderComposition makes its own full-size canvas, so blit it down.
+          const full = renderComposition(outputs, composition, settings)
+          ctx.drawImage(full, 0, 0, canvas.width, canvas.height)
+        } else {
+          // Moving: a full-size canvas per frame is too slow, so draw scaled.
+          ctx.scale(s, s)
+          renderCompositionTo(ctx, outputs, composition, settings, t)
+        }
+        return
+      }
+      if (output) {
+        ctx.scale(s, s)
+        renderOutputTo(ctx, output, settings, t, composition)
+      }
+    }
+
+    if (!animated || !playing) {
+      draw()
+      if (clock.current) clock.current.textContent = ''
       return
     }
-
-    if (output) {
-      ctx.save()
-      ctx.scale(s, s)
-      renderOutputTo(ctx, output, settings)
-      ctx.restore()
+    const loop = loopTiming(settings.animation).seconds
+    const start = performance.now()
+    let raf = 0
+    const tick = (now: number) => {
+      const t = ((now - start) / 1000) % loop
+      draw(t)
+      if (clock.current) clock.current.textContent = `${t.toFixed(2)} / ${loop.toFixed(2)} s`
+      raf = requestAnimationFrame(tick)
     }
-  }, [output, outputs, composition, mode, settings, targetW, targetH])
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [output, outputs, composition, mode, settings, targetW, targetH, animated, playing, imageVersion])
 
   if (!target) {
     return (
@@ -117,8 +148,17 @@ export function Preview({
         <span>preview {Math.round(scale * 100)}%</span>
         {scale < 1 ? (
           <span className="caveat">
-            scaled — 1px detail is approximate here, the exported PNG is exact
+            scaled — 1px detail is approximate here, the exported file is exact
           </span>
+        ) : null}
+        {animated ? (
+          <>
+            <span ref={clock} className="clock" />
+            <button type="button" className="ghost small" onClick={() => setPlaying(!playing)}>
+              {playing ? 'Pause' : 'Play'}
+            </button>
+            {!playing ? <span>showing the PNG frame, {settings.animation.stillAtSeconds} s</span> : null}
+          </>
         ) : null}
       </div>
     </div>

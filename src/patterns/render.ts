@@ -12,7 +12,7 @@
  * ceiling, and total area is capped around 268 megapixels on Chrome.
  */
 
-import type { Output, PatternSettings, RenderMode, Rect } from '../types'
+import type { Output, PatternKind, PatternSettings, RenderMode, Rect } from '../types'
 import { greyCss } from '../lib/colour'
 import {
   drawAlignment,
@@ -24,8 +24,18 @@ import {
   drawSmpteBars,
   drawSolid,
   groupColour,
+  ledTiles,
+  MAX_TILES,
+  uniformTileCount,
   type Ctx,
 } from './draw'
+import { isAnimated, plainEnv, type PaintEnv, type PatternImage } from './env'
+import { drawBananas, drawDinosaurs, drawHamsters, drawRulers } from './novelty'
+import { drawDinoScroll, drawOcean, drawVolcano } from './scenes'
+import { drawBrokenWall } from './broken'
+import { drawImagePattern } from './image'
+import { loopTiming } from './loop'
+import { resolvePitch } from './scale'
 
 const MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace'
 
@@ -68,6 +78,7 @@ export function paintPattern(
   h: number,
   settings: PatternSettings,
   output?: Output,
+  env: PaintEnv = plainEnv(w, h),
 ) {
   const range = settings.levels
   switch (settings.kind) {
@@ -95,6 +106,175 @@ export function paintPattern(
     case 'pixel-check':
       drawPixelCheck(ctx, w, h, settings.pixelCheck, range)
       break
+    case 'rulers':
+      drawRulers(ctx, w, h, settings.rulers, settings.scale, env)
+      break
+    case 'bananas':
+      drawBananas(ctx, w, h, settings.bananas, settings.scale, env)
+      break
+    case 'dinosaurs':
+      drawDinosaurs(ctx, w, h, settings.dinosaurs, settings.scale, env)
+      break
+    case 'hamsters':
+      drawHamsters(ctx, w, h, settings.hamsters, env)
+      break
+    case 'ocean':
+      drawOcean(ctx, w, h, settings.ocean, env)
+      break
+    case 'dino-scroll':
+      drawDinoScroll(ctx, w, h, settings.scene, env)
+      break
+    case 'volcano':
+      drawVolcano(ctx, w, h, settings.scene, env)
+      break
+    case 'image':
+      drawImagePattern(ctx, w, h, settings.image, env)
+      break
+    case 'broken-wall': {
+      const base: PatternSettings = { ...settings, kind: settings.broken.base }
+      drawBrokenWall(
+        ctx,
+        w,
+        h,
+        settings.broken,
+        env,
+        (c, bw, bh, t) => paintPattern(c, bw, bh, base, output, { ...env, t }),
+        isAnimated(base),
+      )
+      break
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The paint environment: time, scale, and where a canvas sits on the surface
+// ---------------------------------------------------------------------------
+
+/**
+ * The patterns that are drawn on the SURFACE rather than per output, and so
+ * carry on across the join between outputs when spanning is on. The measurement
+ * patterns are deliberately not among them: bars and grids belong to one
+ * output's raster, exactly.
+ */
+const SURFACE_KINDS: ReadonlySet<PatternKind> = new Set<PatternKind>([
+  'rulers',
+  'bananas',
+  'dinosaurs',
+  'hamsters',
+  'ocean',
+  'dino-scroll',
+  'volcano',
+  'image',
+])
+
+export function spansSurface(settings: PatternSettings): boolean {
+  const k = settings.kind === 'broken-wall' ? settings.broken.base : settings.kind
+  return settings.scale.span && SURFACE_KINDS.has(k)
+}
+
+/**
+ * Where an output sits on the spanned surface, or null if it should be drawn
+ * as its own world. A region that the output stretches (a different aspect
+ * from its raster — Resolume's slice bounding box can be) is not spanned: on a
+ * stretched mapping nothing can be life-size in both directions at once, and a
+ * scene would arrive squashed. Such an output gets its own pattern instead.
+ */
+export function spanPlace(
+  output: Output | undefined,
+  settings: PatternSettings,
+  region: Rect | undefined,
+  composition: { widthPx: number; heightPx: number } | undefined,
+): { rect: Rect; composition: { widthPx: number; heightPx: number } } | null {
+  if (!spansSurface(settings) || !composition || !region || !(region.width > 0) || !(region.height > 0)) return null
+  if (output) {
+    const sx = output.widthPx / region.width
+    const sy = output.heightPx / region.height
+    if (Math.abs(sx / sy - 1) > 0.005) return null
+  }
+  return { rect: region, composition }
+}
+
+/** A stable number for an output, so outputs that are each their own world do not all break alike. */
+function outputKey(output: Output | undefined): number {
+  const id = output?.id ?? ''
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) >>> 0
+  return h
+}
+
+function needsTiles(settings: PatternSettings): boolean {
+  return (
+    settings.kind === 'hamsters' ||
+    settings.kind === 'broken-wall' ||
+    (settings.kind === 'bananas' && settings.bananas.layout === 'per-tile')
+  )
+}
+
+/** The patterns whose colours follow the level-range setting. The rest are drawn in full range. */
+const LEVELLED: ReadonlySet<PatternKind> = new Set<PatternKind>(['smpte-rp219', 'ebu-bars', 'solid', 'greyscale', 'pixel-check'])
+
+/**
+ * The range the canvas's RGB codes are in, which is what the MP4 encoder must
+ * read them as. Artwork is always drawn 0–255; only the measurement patterns
+ * that honour the level setting can be in 16–235.
+ */
+export function canvasRange(settings: PatternSettings): PatternSettings['levels'] {
+  const k = settings.kind === 'broken-wall' ? settings.broken.base : settings.kind
+  return LEVELLED.has(k) ? settings.levels : 'full'
+}
+
+/** The image the `image` pattern draws. Held outside the store: it is never persisted. */
+let patternImage: PatternImage | null = null
+export function setPatternImage(img: PatternImage | null) {
+  patternImage = img
+}
+export function getPatternImage(): PatternImage | null {
+  return patternImage
+}
+
+/** The moment a still of a moving pattern shows, and the loop it belongs to. */
+export function stillTime(settings: PatternSettings): { t: number; loopSeconds: number } {
+  const timing = loopTiming(settings.animation)
+  if (!isAnimated(settings)) return { t: 0, loopSeconds: timing.seconds }
+  const t = Math.max(0, settings.animation.stillAtSeconds) % timing.seconds
+  return { t, loopSeconds: timing.seconds }
+}
+
+/**
+ * Work out the paint environment for one output drawn into a `pw` x `ph`
+ * painter area. `place` is where that area sits in the composition, when the
+ * surface is spanned; null means the output is its own world.
+ */
+export function makeEnv(
+  output: Output | undefined,
+  settings: PatternSettings,
+  pw: number,
+  ph: number,
+  place: { rect: Rect; composition: { widthPx: number; heightPx: number } } | null,
+  t?: number,
+): PaintEnv {
+  const still = stillTime(settings)
+  const rasterW = output?.widthPx ?? pw
+  // Painter units per raster pixel. 1 unless a composition region is scaled.
+  const scale = pw / rasterW
+  const pitch = resolvePitch(output, settings.scale)
+  const view = place ? { x: place.rect.x, y: place.rect.y } : { x: 0, y: 0 }
+  const wantTiles = needsTiles(settings)
+  const usesUniform = settings.led.source === 'uniform' || !(output?.regions ?? []).some((r) => r.order !== undefined)
+  const count = wantTiles && usesUniform ? uniformTileCount(pw, ph, settings.led, scale) : 0
+  return {
+    t: t ?? still.t,
+    loopSeconds: still.loopSeconds,
+    world: place ? { ...place.composition } : { widthPx: pw, heightPx: ph },
+    view,
+    mmPerPx: pitch.pitchMm / scale,
+    pitchAssumed: pitch.assumed,
+    // Tiles belong to the output, even on a span: a processor's cabinets start
+    // at its own raster's origin, wherever the output sits in the composition.
+    tiles: wantTiles ? ledTiles(pw, ph, settings.led, output?.regions ?? [], { x: 0, y: 0 }, scale) : [],
+    ...(count > MAX_TILES ? { tooManyTiles: count } : {}),
+    localKey: place ? 0 : outputKey(output),
+    image: patternImage,
   }
 }
 
@@ -218,21 +398,58 @@ export const PATTERN_LABELS: Record<PatternSettings['kind'], string> = {
   solid: 'Solid field',
   greyscale: 'Greyscale',
   'pixel-check': 'Pixel check',
+  rulers: 'Rulers',
+  bananas: 'Banana for scale',
+  dinosaurs: 'Life-size dinosaurs',
+  hamsters: 'Hamster dance',
+  ocean: 'Ocean waves',
+  'dino-scroll': 'Dinosaur scroll',
+  volcano: 'Volcano and comet',
+  'broken-wall': 'Broken wall',
+  image: 'Your image',
 }
 
-/** Draw one output's pattern into an existing context, at raster scale. */
-export function renderOutputTo(ctx: Ctx, output: Output, settings: PatternSettings) {
+/**
+ * Draw one output's pattern into an existing context, at raster scale.
+ *
+ * When the surface is spanned and the output knows where it sits in the
+ * composition, the pattern is painted in composition units and scaled onto the
+ * raster, so a scene is continuous across outputs. `t` is the moment to draw;
+ * left out, a moving pattern shows its still frame.
+ */
+export function renderOutputTo(
+  ctx: Ctx,
+  output: Output,
+  settings: PatternSettings,
+  t?: number,
+  composition?: { widthPx: number; heightPx: number },
+) {
   const { widthPx: w, heightPx: h } = output
-  paintPattern(ctx, w, h, settings, output)
+  const cr = output.compositionRect
+  const place = spanPlace(output, settings, cr, composition)
+  if (place && cr) {
+    ctx.save()
+    ctx.scale(w / cr.width, h / cr.height)
+    const env = makeEnv(output, settings, cr.width, cr.height, place, t)
+    paintPattern(ctx, cr.width, cr.height, settings, output, env)
+    ctx.restore()
+  } else {
+    paintPattern(ctx, w, h, settings, output, makeEnv(output, settings, w, h, null, t))
+  }
   paintRegionOverlay(ctx, output, settings)
   paintOverlayText(ctx, w, h, settings, overlayLines(output, settings))
 }
 
-export function renderOutput(output: Output, settings: PatternSettings): HTMLCanvasElement {
+export function renderOutput(
+  output: Output,
+  settings: PatternSettings,
+  t?: number,
+  composition?: { widthPx: number; heightPx: number },
+): HTMLCanvasElement {
   const canvas = makeCanvas(output.widthPx, output.heightPx)
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Could not get a 2D canvas context.')
-  renderOutputTo(ctx, output, settings)
+  renderOutputTo(ctx, output, settings, t, composition)
   return canvas
 }
 
@@ -249,11 +466,27 @@ export function renderComposition(
   outputs: Output[],
   composition: { widthPx: number; heightPx: number },
   settings: PatternSettings,
+  t?: number,
 ): HTMLCanvasElement {
   const canvas = makeCanvas(composition.widthPx, composition.heightPx)
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Could not get a 2D canvas context.')
+  renderCompositionTo(ctx, outputs, composition, settings, t)
+  return canvas
+}
 
+/**
+ * The composition, drawn into any context — at full size for the export, or
+ * through a scaled context for the preview, which is what lets a moving
+ * pattern animate in composition mode without a full-size canvas per frame.
+ */
+export function renderCompositionTo(
+  ctx: Ctx,
+  outputs: Output[],
+  composition: { widthPx: number; heightPx: number },
+  settings: PatternSettings,
+  t?: number,
+) {
   // Anything not covered by an output stays visibly dead, so gaps in the map
   // read as gaps rather than as black picture content.
   ctx.fillStyle = greyCss(0, settings.levels)
@@ -277,7 +510,8 @@ export function renderComposition(
     ctx.clip()
     ctx.translate(r.x, r.y)
 
-    paintPattern(ctx, r.width, r.height, settings, output)
+    const place = spanPlace(output, settings, r, composition)
+    paintPattern(ctx, r.width, r.height, settings, output, makeEnv(output, settings, r.width, r.height, place, t))
 
     ctx.strokeStyle = groupColour(i, placed.length)
     ctx.lineWidth = 4
@@ -290,8 +524,6 @@ export function renderComposition(
     ])
     ctx.restore()
   })
-
-  return canvas
 }
 
 export function canvasToPng(canvas: HTMLCanvasElement): Promise<Uint8Array> {

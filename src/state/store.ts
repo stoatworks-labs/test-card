@@ -21,9 +21,15 @@ type Persisted = {
   mode: RenderMode
 }
 
+/** What is known about the loaded image. The pixels live in render.ts, never here. */
+export type ImageInfo = { name: string; width: number; height: number; version: number }
+
 type State = Persisted & {
   warnings: string[]
   selectedId: string | null
+  /** Not persisted: the image itself is in IndexedDB, see image-store.ts. */
+  image: ImageInfo | null
+  setImage: (info: Omit<ImageInfo, 'version'> | null) => void
 
   loadImport: (result: ImportResult) => void
   addManualOutput: (name: string, width: number, height: number) => void
@@ -93,6 +99,8 @@ export const useStore = create<State>((set, get) => {
     ...initial,
     warnings: [],
     selectedId: initial.outputs[0]?.id ?? null,
+    image: null,
+    setImage: (info) => set({ image: info ? { ...info, version: (get().image?.version ?? 0) + 1 } : null }),
 
     loadImport: (result) =>
       after({
@@ -149,6 +157,7 @@ export const useStore = create<State>((set, get) => {
         warnings: [],
         selectedId: null,
         mode: 'per-output',
+        image: null,
       }),
   }
 })

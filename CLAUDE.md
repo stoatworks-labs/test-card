@@ -8,7 +8,7 @@ Command reference. For the model, the invariants and the traps, read
 ```bash
 npm install
 npm run dev          # vite dev server
-npm test             # vitest — 88 tests, no ffmpeg needed
+npm test             # vitest — 215 tests, no ffmpeg needed (MP4 checks skip without it)
 npm run test:watch
 npm run build        # tsc -b && vite build -> dist/
 npm run preview      # serve the built dist/ (does NOT apply _headers)
@@ -33,6 +33,12 @@ Only needed if you want to re-derive it from scratch; the JSON is committed.
 python3 scripts/extract-rp219-reference.py > test/fixtures/rp219-ffmpeg.json
 ```
 
+## Regenerating the H.264 fixture
+
+```bash
+scripts/make-h264-fixture.sh   # test/fixtures/h264-64x48.h264, for mp4.test.ts
+```
+
 ## Regenerating the importer fixtures
 
 ```bash
@@ -51,3 +57,6 @@ Then copy into `test/fixtures/`. Never hand-edit them.
   stay visible to the user.
 - `Preview.tsx` renders through `renderOutputTo` — never its own copy.
 - Don't vendor blend-calc's or pixel-peeker's libraries.
+- Moving patterns do whole cycles per loop; frame N equals frame 0.
+- No `Math.random` in `src/patterns/` — use `random.ts`.
+- Artwork is polygons in real units, held to its sizes by the tests.

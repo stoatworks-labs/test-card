@@ -90,3 +90,28 @@ describe('manifest', () => {
     expect(text).toContain('"Left, Main"')
   })
 })
+
+describe('moving and scale-aware exports', () => {
+  it('names a loop by its frame rate and length, so the file says what it is', () => {
+    const s = { ...DEFAULT_SETTINGS, kind: 'ocean' as const, animation: { ...DEFAULT_SETTINGS.animation, seconds: 10, fps: '29.97' as const } }
+    expect(outputFileName(out('Main LED'), s, 'mp4')).toBe('main-led_ocean_1920x1080_29p97fps_10p01s.mp4')
+    expect(zipFileName('Show', s, 'mp4')).toBe('show_ocean_loops.zip')
+    expect(outputFileName(out('Main LED'), s)).toBe('main-led_ocean_1920x1080.png')
+  })
+
+  it('writes the loop and the colour encoding into the manifest', () => {
+    const s = { ...DEFAULT_SETTINGS, kind: 'hamsters' as const }
+    const m = buildManifest('Show', [out('A')], ['a.mp4'], s, 'mp4')
+    expect(m).toContain('300 frames at 30 fps')
+    expect(m).toContain('BT.709')
+  })
+
+  it('records each output’s pitch for a scale-aware pattern, and flags a guessed one', () => {
+    const s = { ...DEFAULT_SETTINGS, kind: 'bananas' as const }
+    const m = buildManifest('Show', [out('A', 1920, 1080, { pitchMm: 3.9, pitchSource: 'imported' }), out('B')], ['a.png', 'b.png'], s)
+    expect(m).toContain('a.png, A, 1920x1080, declared, 0, 3.9, imported')
+    expect(m).toContain('b.png, B, 1920x1080, declared, 0, 2.6, ASSUMED')
+    expect(m).toMatch(/had no pixel pitch/)
+  })
+})
+

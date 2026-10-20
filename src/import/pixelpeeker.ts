@@ -63,7 +63,7 @@ type IcProcessor = {
 type InterchangeDoc = {
   format?: string
   project?: { name?: string; client?: string; venue?: string }
-  wall?: { widthPx?: number; heightPx?: number; approximatePixelMap?: boolean }
+  wall?: { widthPx?: number; heightPx?: number; approximatePixelMap?: boolean; referencePitchMm?: number }
   signal?: { bitDepth?: number; frameRateHz?: number; ledRefreshHz?: number }
   processors?: IcProcessor[]
   unpatchedCabinets?: string[]
@@ -118,6 +118,9 @@ export function parsePixelPeekerInterchange(doc: unknown): ImportResult {
   if (!processors.length) {
     throw new Error('That Pixel Peeker export has no processors in it.')
   }
+
+  const pitch =
+    typeof d.wall?.referencePitchMm === 'number' && d.wall.referencePitchMm > 0 ? d.wall.referencePitchMm : undefined
 
   processors.forEach((proc, pi) => {
     const procName = proc.name ?? `Processor ${pi + 1}`
@@ -201,6 +204,9 @@ export function parsePixelPeekerInterchange(doc: unknown): ImportResult {
       regions,
       notes,
       enabled: true,
+      // The wall's reference pitch: exact on a single-pitch wall, indicative on
+      // a mixed one (flagged below). Only the scale-aware patterns read it.
+      ...(pitch ? { pitchMm: pitch, pitchSource: 'imported' as const } : {}),
     })
   })
 
