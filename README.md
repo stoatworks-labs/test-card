@@ -1,7 +1,7 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 215 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 217 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is

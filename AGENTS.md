@@ -38,6 +38,8 @@ src/patterns/novelty.ts rulers, bananas, life-size dinosaurs, hamsters
 src/patterns/scenes.ts ocean, dinosaur scroll, volcano — the moving scenes
 src/patterns/broken.ts the broken wall: fault choice and pixel ops (pure) + painter
 src/patterns/image.ts your image, fitted (pure placement) + painter
+src/engine.ts         the embeddable entry: settings, painters, limits, no React —
+                      LivePremier Plus bundles it (see "Embedded elsewhere")
 src/patterns/art/*.ts the artwork, as polygons: shapes, bananas, dinosaurs,
                       hamster sprites, scenery. Only shapes.fillShapes touches a canvas
 src/lib/mp4.ts        hand-rolled MP4 writer, one H.264 track
@@ -196,9 +198,21 @@ from the browser console with `await import('/src/lib/video.ts')` keeps handing
 back the version from before your last edit until the page is reloaded. Two
 "different" runs that produce byte-identical files are the giveaway.
 
+## Embedded elsewhere
+
+**LivePremier Plus draws these patterns on a switcher.** Its `tools/sync-test-card.mjs`
+bundles `src/engine.ts` with this repo's own rolldown into its
+`src/vendor/test-card/engine.js`, recording this repo's commit and a SHA-256 of every
+source file that went in, so its tests can tell a deliberate sync from drift. It builds
+`Output`s from the switcher's own output and canvas geometry and puts the PNGs on the
+switcher as stills. So `engine.ts` is an interface: `engine.test.ts` holds its import
+graph clear of React, the store and the UI, and a rename there breaks the next sync
+there rather than anything here. A pattern added here reaches LivePremier Plus only when
+it re-syncs.
+
 ## Testing
 
-`npm test` — 215 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 217 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with
