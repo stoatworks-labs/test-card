@@ -20,11 +20,13 @@ nothing is uploaded.
 > browser.
 >
 > The MP4 loops are made in Chrome and read back by ffmpeg: 75% bars come back within one code
-> value of the standard, and the loops go round with no seam.
+> value of the standard, and the loops go round with no seam. They've also been played in Resolume
+> Arena 7.28.1, which opens them, gets the colour right and loops them cleanly, with one catch
+> covered under **Moving patterns** below.
 >
 > **No image or loop it produces has been played out to a real projector, LED processor or display
-> and measured, and no MP4 has been played in Resolume yet.** The patterns are correct as pixels;
-> what a screen does with them is something this can't tell you.
+> and measured.** The patterns are correct as pixels; what a screen does with them is something
+> this can't tell you.
 >
 > This codebase was created with AI assistance, directed and reviewed by a human author.
 
@@ -109,6 +111,13 @@ get a **Download MP4 loop** button. Set the length and frame rate under **Loop**
 - A loop that would come to more than about 1 GB is refused before it starts, since the whole file
   has to fit in the browser tab's memory.
 
+**In Resolume.** Arena 7.28.1 plays them at the right size, rate and length, with the right colour,
+and loops them without dropping or repeating a frame. The catch: an H.264 clip triggered from cold
+often plays for about half a second and then holds that picture until its first wrap. That's
+Arena's H.264 playback, not this file (ffmpeg's own H.264 encodes do the same; DXV doesn't). Before
+a show, convert the loop to **DXV** with Alley, which comes with Arena, or trigger the clip and let
+it run once round.
+
 ---
 
 ## Two ways to render, and when each is the right one
@@ -174,5 +183,6 @@ You can also just add outputs by hand.
 | **No MP4 button** | The pattern doesn't move. A broken wall moves if its picture does, or with flicker or data noise ticked. |
 | **"H.264 needs an even width and height"** | 4:2:0 video can't carry an odd raster. Export PNGs, or check the raster. |
 | **"The browser's H.264 encoder will not take…"** | The raster is bigger than this browser will encode. Export that output as PNGs, or split it. |
+| **An MP4 freezes after half a second in Resolume, then carries on at the wrap** | Arena's H.264 playback from cold, not the file. Convert it to DXV with Alley, or let it run once round before the show. |
 | **"That loop would be about … GB"** | Too long, too big or too high a bitrate to build in a tab. Shorten the loop or lower the bitrate. |
 | **The image has gone** | It's kept in this browser's storage. Another browser, a private window or cleared site data won't have it. |

@@ -103,8 +103,32 @@ sea dropped a band at the bottom edge and popped one in at the horizon; plus
 bitrate-aware levels, the decoder config, ridge and snow shimmer, Clear
 everything leaving the image behind, and tiled images as millions of draws.
 
-Not run: no MP4 has been played in Resolume (Arena is installed here, not
-tried), nothing on a real wall or projector, no other browser.
+Played in Resolume the same day (Arena 7.28.1 build 26535, macOS 26.4.1, this
+Mac, driven through its REST API on port 8080): ocean, scroll and hamsters at
+1920x1080 and an ocean at 3840x2160, 30 fps, 10 s. Arena reads them through
+AVFoundation at the right size, 30/1 fps and 10000 ms. Its output snapshot of
+frame 0 matched a BT.709 limited-range decode, mean |error| 0.90 code values at
+1080p and 0.78 at 4K (BT.601 limited 3.1, BT.709 full 5.5); it runs about 0.5%
+bright, its own gain. Its recorder caught 630 consecutive output frames of the
+scroll: every source frame once and in order, wraps 297, 298, 299, 0, 1, 2,
+exactly 300 output frames apart.
+
+**Arena's H.264 cold-start freeze.** Triggered from disconnected, an H.264 loop
+often plays about 0.6 s (frames 17–23) then holds that picture while Arena's
+clock runs on, until the first wrap, after which it plays perfectly. Ours froze
+8 of 11 times; ffmpeg's `-c copy` rewrap 3/4; libx264 GOP 30 3/4, one keyframe
+per loop 2/3, all-intra 2/3. The first trigger in each series never froze. A DXV
+encode of the same pictures froze 0 of 3. Arena plays H.264 through AVPlayer,
+which reports itself waiting after the seek to 0. Container, bitstream and
+keyframe interval are ruled out, so there is nothing to fix in mp4.ts or
+video.ts; the docs give the workaround (DXV via Alley, or one run round first).
+
+Arena traps for whoever does this next: its default keyboard map fires clips
+from plain keys typed while it is frontmost, and quitting it dropped the SMPTE
+input lines from config.xml and wrote the composition size into
+SimpleOutput.xml. Back up its Preferences folder first.
+
+Still not run: nothing on a real wall or projector, no other browser.
 
 The art is drawn in code and is original — including the hamsters, which are a
 nod to the 1998 page rather than a copy of it.

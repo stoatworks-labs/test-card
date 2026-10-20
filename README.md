@@ -7,10 +7,11 @@
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
 > sound. The importers are tested against real files, and the whole path has been driven end to
 > end in a browser; the Verification section has the details. The MP4 loops are made in Chrome
-> and read back by ffmpeg, which decodes the bars to within one code value. **No image or loop it
-> produces has been played out to a real projector, LED processor or display and measured, and no
-> MP4 has been played in Resolume yet.** The patterns are correct as pixels; what a screen does
-> with them is something this can't tell you.
+> and read back by ffmpeg, which decodes the bars to within one code value, and they've been
+> played in Resolume Arena 7.28.1, which opens them, gets the colour right and loops them without a
+> seam (but see the note on starting an H.264 clip from cold). **No image or loop it produces has
+> been played out to a real projector, LED processor or display and measured.** The patterns are
+> correct as pixels; what a screen does with them is something this can't tell you.
 
 Test patterns for every physical output in a show, made from the file that already describes the
 outputs.
@@ -99,6 +100,18 @@ what that browser's H.264 encoder will take. I've only tried it in Chrome, where
 and 7680 × 1080 but not 8192 × 2160. Edge should behave the same; Safari and Firefox have WebCodecs
 too, but I haven't tried either. It tells you before it starts if it can't.
 
+### In Resolume
+
+I've played them in Arena 7.28.1 on a Mac, at 1080p and 4K. Arena opens them at the right size,
+rate and length, gets the colour right (its output matches a BT.709 limited-range decode to within
+a code value on average), and goes round the loop without dropping or repeating a frame.
+
+One catch, and it's Arena's rather than the file's. An H.264 clip triggered from cold often plays
+for about half a second, then holds that picture until the clip's first wrap, after which it's
+fine. ffmpeg's own H.264 encodes of the same pictures do exactly the same thing; a DXV encode never
+did. So for a show, either convert the loop to DXV with Alley (it comes with Arena), or trigger the
+clip and let it run once round before doors.
+
 ## Two ways to render
 
 - **One PNG per output:** each file at that output's native raster. One output downloads as a bare
@@ -177,6 +190,14 @@ for the invariants and the traps.
   broken-wall loops are pixel-identical at t = 0 and t = T before encoding, and after it the step
   from the last frame back to the first is within about a tenth of a grey level of the step into
   any other keyframe of the same loop.
+- **In Resolume:** Arena 7.28.1 (macOS 26.4.1) opened ocean, scroll and hamster loops at
+  1920 × 1080 and an ocean at 3840 × 2160, all at 30 fps and exactly 10 s. Its output snapshot of
+  frame 0 matched a BT.709 limited-range decode with a mean error of 0.90 code values at 1080p and
+  0.78 at 4K, against 3.1 for BT.601. Its own recorder caught 630 consecutive output frames of the
+  scroll: every source frame once and in order through two wraps, exactly 10 s apart. Triggered
+  from cold, H.264 clips froze after about 0.6 s until their first wrap in 8 of 11 tries; libx264
+  encodes did the same at every keyframe interval tried, all-intra included, and a DXV encode froze
+  in none of 3.
 - **Spanning:** the six-projector Blend Calc export rendered per output, with every surface pattern
   matching in the edge-blend overlaps apart from at most nine antialiased edge pixels.
 - **Reviewed:** an independent review of the whole change before it landed found twelve problems,
