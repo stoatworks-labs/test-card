@@ -10,7 +10,9 @@ import {
   downloadBlob,
   outputFileName,
   packageZip,
+  tileFileName,
   zipFileName,
+  type TiledLoop,
 } from '../lib/export'
 import {
   canvasToPng,
@@ -26,7 +28,7 @@ import {
 import { isAnimated } from '../patterns/env'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
-import { encodeLoop, videoProblem } from '../lib/video'
+import { encodePlan, planLoop, type EncodeRequest, type LoopPlan } from '../lib/video'
 import { clearImage, decodeImage, loadImage } from '../state/image-store'
 
 class Cancelled extends Error {}
@@ -80,61 +82,123 @@ export default function App() {
     return (selected.widthPx * pitch) / 1000
   }, [selected, store.settings, store.composition])
 
+  // Which loops this browser will only take as tiles, worked out ahead so the
+  // page can say so before anyone presses the button. Errors are left for the
+  // export itself to report, in full.
+  const [tiling, setTiling] = useState<{ label: string; width: number; height: number; plan: LoopPlan }[]>([])
+  const { seconds, fps, bitrateMbps } = store.settings.animation
+  const rasters =
+    store.mode === 'composition'
+      ? store.composition
+        ? [{ label: 'The composition', width: store.composition.widthPx, height: store.composition.heightPx }]
+        : []
+      : enabled.map((o) => ({ label: o.name, width: o.widthPx, height: o.heightPx }))
+  const rastersKey = JSON.stringify(rasters)
+  useEffect(() => {
+    if (!moving) {
+      setTiling([])
+      return
+    }
+    let live = true
+    const timing = loopTiming({ seconds, fps })
+    const bitrate = Math.max(0, bitrateMbps) * 1e6
+    const targets = JSON.parse(rastersKey) as typeof rasters
+    void Promise.all(
+      targets.map((r) =>
+        planLoop(r.width, r.height, timing, bitrate).then(
+          (plan) => (plan.tiles.length > 1 ? { ...r, plan } : null),
+          () => null,
+        ),
+      ),
+    ).then((found) => {
+      if (live) setTiling(found.filter((f) => f !== null))
+    })
+    return () => {
+      live = false
+    }
+  }, [moving, rastersKey, seconds, fps, bitrateMbps])
+
   async function exportLoops() {
     const settings = store.settings
     const timing = loopTiming(settings.animation)
     const range = canvasRange(settings)
     const bitrate = Math.max(0, settings.animation.bitrateMbps) * 1e6
-    const check = (o: { name: string; widthPx: number; heightPx: number }) => {
-      const problem = videoProblem(o.widthPx, o.heightPx)
-      if (problem) throw new Error(`${o.name}: ${problem}`)
+    const files: { name: string; data: Uint8Array }[] = []
+    const tiled: TiledLoop[] = []
+
+    // Plan every loop before encoding any, so a raster no grid will fit is
+    // refused before minutes go into the ones ahead of it.
+    type Job = { label: string; name: string; width: number; height: number; render: EncodeRequest['render'] }
+    const plan = async (job: Job) => {
+      try {
+        return await planLoop(job.width, job.height, timing, bitrate)
+      } catch (err) {
+        throw new Error(`${job.label}: ${(err as Error).message}`)
+      }
     }
-    const progress = (label: string) => (done: number, total: number) => {
-      if (cancel.current) throw new Cancelled('Cancelled.')
-      setBusy(`${label} — frame ${done} of ${total}`)
+    const encode = async (job: Job, loop: LoopPlan, label: string) => {
+      const parts = loop.tiles.length
+      const data = await encodePlan(loop, {
+        timing,
+        range,
+        render: job.render,
+        onProgress: (done, total, tile) => {
+          if (cancel.current) throw new Cancelled('Cancelled.')
+          setBusy(`${label}${parts > 1 ? `, tile ${tile + 1} of ${parts}` : ''} — frame ${done} of ${total}`)
+        },
+      })
+      if (parts === 1) {
+        files.push({ name: job.name, data: data[0]! })
+        return job.name
+      }
+      const named = loop.tiles.map((t) => ({ ...t, name: tileFileName(job.name, t) }))
+      named.forEach((t, i) => files.push({ name: t.name, data: data[i]! }))
+      tiled.push({ label: job.label, width: job.width, height: job.height, cols: loop.cols, rows: loop.rows, files: named })
+      return `${parts} tiles listed below`
+    }
+    const pack = (outputs: typeof enabled, cells: string[]) => {
+      setBusy('Packing ZIP…')
+      const zip = packageZip(files, buildManifest(store.projectName, outputs, cells, settings, 'mp4', tiled))
+      downloadBlob(zipFileName(store.projectName, settings, 'mp4'), zip, 'application/zip')
     }
 
     if (store.mode === 'composition') {
       const comp = store.composition
       if (!comp) throw new Error('No composition size for this import.')
-      check({ name: 'Composition', ...comp })
-      const mp4 = await encodeLoop({
+      const job: Job = {
+        label: 'Composition',
+        name: compositionFileName(store.projectName, settings, comp.widthPx, comp.heightPx, 'mp4'),
         width: comp.widthPx,
         height: comp.heightPx,
-        timing,
-        range,
-        bitrate,
         render: (ctx, t) => renderCompositionTo(ctx, store.outputs, comp, settings, t),
-        onProgress: progress('Encoding composition'),
-      })
-      downloadBlob(compositionFileName(store.projectName, settings, comp.widthPx, comp.heightPx, 'mp4'), mp4, 'video/mp4')
+      }
+      await encode(job, await plan(job), 'Encoding composition')
+      if (files.length === 1) downloadBlob(files[0]!.name, files[0]!.data, 'video/mp4')
+      else pack([], [])
       return
     }
 
     if (!enabled.length) throw new Error('No outputs are enabled.')
-    enabled.forEach(check)
-    const files: { name: string; data: Uint8Array }[] = []
-    for (let i = 0; i < enabled.length; i++) {
-      const output = enabled[i]!
-      const label = enabled.length > 1 ? `Encoding ${i + 1} of ${enabled.length}, ${output.name}` : `Encoding ${output.name}`
-      const mp4 = await encodeLoop({
-        width: output.widthPx,
-        height: output.heightPx,
-        timing,
-        range,
-        bitrate,
-        render: (ctx, t) => renderOutputTo(ctx, output, settings, t, store.composition),
-        onProgress: progress(label),
-      })
-      files.push({ name: outputFileName(output, settings, 'mp4'), data: mp4 })
+    const jobs: Job[] = enabled.map((output) => ({
+      label: output.name,
+      name: outputFileName(output, settings, 'mp4'),
+      width: output.widthPx,
+      height: output.heightPx,
+      render: (ctx, t) => renderOutputTo(ctx, output, settings, t, store.composition),
+    }))
+    const plans: LoopPlan[] = []
+    for (const job of jobs) plans.push(await plan(job))
+    const cells: string[] = []
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i]!
+      const label = jobs.length > 1 ? `Encoding ${i + 1} of ${jobs.length}, ${job.label}` : `Encoding ${job.label}`
+      cells.push(await encode(job, plans[i]!, label))
     }
     if (files.length === 1) {
       downloadBlob(files[0]!.name, files[0]!.data, 'video/mp4')
       return
     }
-    setBusy('Packing ZIP…')
-    const zip = packageZip(files, buildManifest(store.projectName, enabled, files.map((f) => f.name), settings, 'mp4'))
-    downloadBlob(zipFileName(store.projectName, settings, 'mp4'), zip, 'application/zip')
+    pack(enabled, cells)
   }
 
   async function run(job: () => Promise<void>) {
@@ -275,10 +339,14 @@ export default function App() {
                   {moving ? (
                     <button className="primary" onClick={() => void run(exportLoops)} disabled={!store.outputs.length}>
                       {store.mode === 'composition'
-                        ? 'Download composition MP4'
+                        ? tiling.length
+                          ? 'Download composition MP4 tiles (ZIP)'
+                          : 'Download composition MP4'
                         : enabled.length > 1
                           ? `Download ZIP of ${enabled.length} MP4 loops`
-                          : 'Download MP4 loop'}
+                          : tiling.length
+                            ? 'Download MP4 tiles (ZIP)'
+                            : 'Download MP4 loop'}
                     </button>
                   ) : null}
                   <button
@@ -301,6 +369,26 @@ export default function App() {
               A moving pattern. The MP4 is a seamless H.264 loop, encoded here in the browser; the
               PNG is the frame at {store.settings.animation.stillAtSeconds} s.
             </p>
+          ) : null}
+          {moving && tiling.length ? (
+            <div className="callout info">
+              <strong>Too big for this browser to encode as one video, so these come as tiles</strong>
+              <ul>
+                {tiling.map((t, i) => {
+                  const first = t.plan.tiles[0]!
+                  const even = t.plan.tiles.every((x) => x.width === first.width && x.height === first.height)
+                  return (
+                    <li key={i}>
+                      <b>{t.label}</b>, {t.width} × {t.height}: {t.plan.cols} × {t.plan.rows} tiles
+                      {even ? ' of ' : ' of about '}
+                      {first.width} × {first.height}
+                    </li>
+                  )
+                })}
+              </ul>
+              Each tile is its own seamless loop, the same length as the rest. The ZIP’s manifest says
+              where each one sits in the full raster, and so does its file name.
+            </div>
           ) : null}
 
           {store.mode === 'composition' ? (

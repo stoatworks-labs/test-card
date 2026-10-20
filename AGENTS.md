@@ -43,7 +43,8 @@ src/engine.ts         the embeddable entry: settings, painters, limits, no React
 src/patterns/art/*.ts the artwork, as polygons: shapes, bananas, dinosaurs,
                       hamster sprites, scenery. Only shapes.fillShapes touches a canvas
 src/lib/mp4.ts        hand-rolled MP4 writer, one H.264 track
-src/lib/video.ts      WebCodecs encode loop and the RGB -> Y′CbCr 4:2:0 conversion
+src/lib/video.ts      WebCodecs encode loop, the RGB -> Y′CbCr 4:2:0 conversion, and the
+                      tile planner for rasters the encoder won't take whole
 src/import/*.ts       one file per source format + detect.ts to sniff
 src/state/            zustand store, persisted to localStorage
 src/ui/               React
@@ -176,10 +177,26 @@ second first, throws it away, and starts the loop proper on a forced keyframe.
 A fixed quantiser (`bitrateMode: 'quantizer'`) fixed it too, but in Chrome 152
 on a Mac it fell back to the software encoder and ran ten times slower.
 
-**Chrome's encoder refuses odd rasters and anything past its level.** 4:2:0
-needs even sides, and on a Mac 8192x2160 is refused where 7680x1080 is fine.
-`videoProblem()` and `pickConfig()` say so before any frame is rendered; never
-let it fail at frame 900.
+**Chrome's encoder refuses odd rasters and anything over 9.4 megapixels.** 4:2:0
+needs even sides. Chrome 152 on a Mac takes H.264 up to 4096 x 2304 of AREA,
+whatever the shape (measured with `isConfigSupported`, 2026-10-20: 8192x1080
+and 2304x4096 yes, 4096x2306 and 4112x2304 no), on High, Main and Baseline,
+hardware or software alike. HEVC, VP9 and AV1 said yes at 8K, but mp4.ts only
+writes H.264. So `planLoop()` cuts a bigger raster into tiles before frame 0,
+asking `isConfigSupported` about each tile size rather than trusting a table,
+and `encodePlan()` encodes them one after another. Never let it fail at frame
+900.
+
+**A video tile is the whole picture shifted, not a crop.** `encodePlan` draws
+each tile by translating the full raster's render under a canvas the size of
+the tile. So a painter must never read the canvas's size, and anything that
+resets the transform must keep the translation, as `drawBrokenWall` does with
+`setTransform(1, 0, 0, 1, m.e, m.f)`. Tile edges and offsets are even, so each
+tile's 2x2 chroma blocks are the whole raster's. The cost is drawing the whole
+picture once per tile per frame; the broken wall builds a full-size offscreen
+canvas each time, so a tiled broken wall is slow. Checked by decoding an 8K
+loop's four tiles, stitching them and comparing with `renderOutput`: mean
+|error| 0.54 code values, the seams no worse than elsewhere.
 
 **A hidden tab's timers run once a second.** Chrome throttles `setTimeout` in a
 background tab (to once a minute after five minutes), so an encode loop that
@@ -191,7 +208,9 @@ the same time behind another tab as in front. A minimised window is untested.
 
 **A loop is held whole in memory.** Every encoded frame stays until the file is
 written, then is copied into the MP4 and again into the download. `encodeLoop`
-refuses anything estimated over `MAX_LOOP_BYTES` (1 GiB) before frame 0.
+refuses anything estimated over `MAX_LOOP_BYTES` (1 GiB) before frame 0, and
+`planLoop` counts every tile of a tiled loop against the same limit: the
+finished tiles are all held until the ZIP is built.
 
 **Vite caches a dynamically imported module across edits.** Driving the encoder
 from the browser console with `await import('/src/lib/video.ts')` keeps handing
@@ -212,7 +231,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 217 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 247 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with

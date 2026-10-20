@@ -71,6 +71,30 @@ export function compositionFileName(
   return `${slug(projectName)}_composition_${PATTERN_SLUGS[settings.kind]}_${width}x${height}${loopSuffix(settings, kind)}.${kind}`
 }
 
+/** Where a video tile sits in the whole raster. */
+export type TilePlace = { col: number; row: number; x: number; y: number; width: number; height: number }
+
+/**
+ * A tile's file: the whole loop's name, then which tile it is and where it
+ * goes, as WIDTHxHEIGHT+X+Y (ImageMagick's geometry), so a tile copied off on
+ * its own still says what it is part of and where it belongs.
+ */
+export function tileFileName(fileName: string, tile: TilePlace): string {
+  const dot = fileName.lastIndexOf('.')
+  const [stem, ext] = dot > 0 ? [fileName.slice(0, dot), fileName.slice(dot)] : [fileName, '']
+  return `${stem}_tile-r${tile.row + 1}c${tile.col + 1}_${tile.width}x${tile.height}+${tile.x}+${tile.y}${ext}`
+}
+
+/** One output's loop, or the composition's, cut into tiles because the encoder would not take it whole. */
+export type TiledLoop = {
+  label: string
+  width: number
+  height: number
+  cols: number
+  rows: number
+  files: (TilePlace & { name: string })[]
+}
+
 export function zipFileName(projectName: string, settings: PatternSettings, kind: FileKind = 'png'): string {
   return `${slug(projectName)}_${PATTERN_SLUGS[settings.kind]}_${kind === 'mp4' ? 'loops' : 'patterns'}.zip`
 }
@@ -88,6 +112,7 @@ export function buildManifest(
   fileNames: string[],
   settings: PatternSettings,
   kind: FileKind = 'png',
+  tiled: TiledLoop[] = [],
 ): string {
   const lines = [
     `Test Card — generated patterns`,
@@ -106,7 +131,7 @@ export function buildManifest(
     lines.push(`Still:    the frame at ${settings.animation.stillAtSeconds} s of a moving pattern`)
   }
   const scaled = isScaleAware(settings)
-  lines.push('', `file, output, raster, raster source, regions${scaled ? ', pitch mm, pitch source' : ''}`)
+  if (outputs.length) lines.push('', `file, output, raster, raster source, regions${scaled ? ', pitch mm, pitch source' : ''}`)
   outputs.forEach((o, i) => {
     const pitch = resolvePitch(o, settings.scale)
     lines.push(
@@ -137,6 +162,19 @@ export function buildManifest(
       'from the source file, and may be smaller than the real output:',
       ...inferred.map((o) => `  - ${o.name} (${o.widthPx}x${o.heightPx})`),
     )
+  }
+  if (tiled.length) {
+    lines.push(
+      '',
+      "VIDEO TILES: this browser's H.264 encoder would not take these rasters as one",
+      'video, so each is cut into a grid of tiles, every one a loop of the same length.',
+      'Put each tile at its x, y in the full raster and play them together; side by side',
+      'they are the whole picture, frame for frame.',
+    )
+    for (const t of tiled) {
+      lines.push('', `${t.label}, ${t.width}x${t.height}, as ${t.cols}x${t.rows} tiles`, 'file, x, y, width, height')
+      for (const f of t.files) lines.push([f.name, f.x, f.y, f.width, f.height].join(', '))
+    }
   }
   return lines.join('\n') + '\n'
 }

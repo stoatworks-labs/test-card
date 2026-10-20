@@ -1,7 +1,7 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 217 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 247 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
@@ -95,10 +95,28 @@ Colour is converted here with the Rec. 709 matrix into limited-range 4:2:0, and 
 labelled as such. The level range means what it does for a PNG: legal-range bars keep their
 sub-black and super-white in the video's footroom and headroom.
 
-It needs a browser that can encode video (WebCodecs), an even width and height, and a raster inside
-what that browser's H.264 encoder will take. I've only tried it in Chrome, where on a Mac that's 4K
-and 7680 × 1080 but not 8192 × 2160. Edge should behave the same; Safari and Firefox have WebCodecs
-too, but I haven't tried either. It tells you before it starts if it can't.
+It needs a browser that can encode video (WebCodecs) and an even width and height. I've only tried
+it in Chrome. Edge should behave the same; Safari and Firefox have WebCodecs too, but I haven't
+tried either. It tells you before it starts if it can't.
+
+### Too big for one video
+
+Chrome's H.264 encoder on a Mac stops at 4096 × 2304 worth of pixels, 9.4 megapixels whatever the
+shape: 8192 × 1080 is fine, 8K isn't, and nor are a fair few LED walls. So a raster bigger than the
+browser will encode comes out as a grid of tiles instead. 8K is four 3840 × 2160 tiles; 15360 × 2160
+is four side by side. It asks the browser what it will take, picks the fewest tiles that fit without
+cutting the picture into slivers, and says so above the preview before you press anything.
+
+Each tile is a seamless loop of its own, the same length as the rest, and they come in a ZIP whose
+manifest says where each one goes. So does the file name:
+`big-wall_ocean_7680x4320_30fps_10s_tile-r1c2_3840x2160+3840+0.mp4` is row 1, column 2, 3840 × 2160,
+top-left corner at x 3840, y 0. Put them at those positions in the media server, play them together,
+and they're the whole picture. A bitrate you've set is shared between the tiles by area, so the set
+comes to what you asked for; auto is worked out for each tile.
+
+I've checked it in Chrome by decoding the four tiles of an 8K loop and stitching them back together:
+they match the picture drawn whole to about half a code value on average, and the joins are no worse
+than anywhere else. I haven't yet played a set of tiles together in a media server.
 
 ### In Resolume
 

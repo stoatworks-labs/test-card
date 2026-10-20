@@ -133,3 +133,31 @@ Still not run: nothing on a real wall or projector, no other browser.
 The art is drawn in code and is original — including the hamsters, which are a
 nod to the 1998 page rather than a copy of it.
 
+## 2026-10-20 — video tiles for rasters too big to encode whole
+
+Allan asked for loops too big for the browser to encode to come out as smaller
+tiles instead of an error. Measured first, in Chrome 152 on this Mac
+(`VideoEncoder.isConfigSupported`): H.264 stops at 4096 x 2304 of area whatever
+the shape, on every profile and with hardware or software preferred. 8192 x
+1080 yes, 4096 x 2306 no, nothing at 8K. HEVC, VP9 and AV1 all said yes to 8K,
+but the muxer only does H.264, and a tile works in any media server.
+
+`planLoop` tries grids in order of tile count times (1 + |ln aspect|), asking
+the browser about each tile size, and takes the first it accepts. Ordering by
+count alone cut a 16384 x 16384 canvas into 29 slivers 565 px wide, 29 being
+prime; now it is 5 x 6. Planning takes 15–110 ms in Chrome. A hand-set bitrate
+is shared between tiles by area.
+
+What was run, through the real UI in the app's browser pane (downloads caught
+by a local receiver rather than saved): a 7680 x 4320 dinosaur scroll came out
+as 2 x 2 tiles of 3840 x 2160, H.264 High, 60 frames, 2.000 s, BT.709 limited,
+named and listed in the manifest. Decoded with ffmpeg and stitched, frames 0
+and 30 matched `renderOutput` at t = 0 and 1 s to mean |error| 0.54 and 0.53
+code values (99th percentile 4 and 3), the same in every tile and in an 8 px
+band on each seam as elsewhere. A per-output set (two UHD outputs whole, one 8K
+tiled) and a 7680 x 2160 composition (2 x 1, mean |error| 0.61) also worked;
+a single UHD output still downloads as a bare MP4. The export carried on with
+the pane hidden.
+
+Not run: tiles played together in Resolume or any media server, other
+browsers, a tiled broken wall at full length (it is slow by design).

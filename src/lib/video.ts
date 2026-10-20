@@ -19,6 +19,21 @@
  * the canvas as 0–255 RGB; `legal` reads it as 16–235, so sub-black and
  * super-white in a legal-range pattern survive into the video's footroom and
  * headroom instead of being squeezed twice.
+ *
+ * TOO BIG FOR ONE VIDEO, SO TILES
+ * ===============================
+ * A browser's H.264 encoder stops well short of a big wall. Chrome 152 on a Mac
+ * refuses anything over 4096 x 2304 = 9.4 megapixels, whatever its shape:
+ * 8192 x 1080 and 2304 x 4096 are fine, 4096 x 2306 is not, and nothing at 8K
+ * is. So `planLoop` cuts a raster the encoder will not take whole into a grid
+ * of tiles, each a loop of its own, which side by side are the picture frame
+ * for frame. It asks the browser rather than a table, since the limit is the
+ * browser's and not the standard's: the fewest tiles it will take, without
+ * cutting the picture into slivers to save one.
+ *
+ * Every tile's sides and offsets are even, so its 2x2 chroma blocks are the
+ * whole raster's. A tile is drawn by shifting the whole picture under a canvas
+ * the size of the tile, so the painters never know.
  */
 
 import type { LevelRange } from '../types'
@@ -159,22 +174,13 @@ export function estimateLoopBytes(width: number, height: number, timing: LoopTim
   return (bps * (timing.seconds + 1)) / 8
 }
 
-async function pickConfig(req: EncodeRequest): Promise<VideoEncoderConfig> {
-  const fps = req.timing.fpsNum / req.timing.fpsDen
-  const bitrate = req.bitrate || autoBitrate(req.width, req.height, fps)
-  const codecs = avcCodecs(req.width, req.height, fps, bitrate)
-  if (!codecs.length) {
-    throw new Error(
-      avcLevel(req.width, req.height, fps) === null
-        ? `${req.width}x${req.height} at ${fps.toFixed(2)} fps is beyond every H.264 level (the ceiling is 8192x4320).`
-        : `${(bitrate / 1e6).toFixed(0)} Mb/s is more than H.264 allows at ${req.width}x${req.height}. Lower the bitrate.`,
-    )
-  }
-  for (const codec of codecs) {
+/** The first codec this browser will configure for the raster, rate and bitrate, or null. */
+async function findConfig(width: number, height: number, fps: number, bitrate: number): Promise<VideoEncoderConfig | null> {
+  for (const codec of avcCodecs(width, height, fps, bitrate)) {
     const config: VideoEncoderConfig = {
       codec,
-      width: req.width,
-      height: req.height,
+      width,
+      height,
       bitrate,
       bitrateMode: 'variable',
       framerate: fps,
@@ -188,10 +194,141 @@ async function pickConfig(req: EncodeRequest): Promise<VideoEncoderConfig> {
       // An invalid config throws rather than answering "no"; try the next.
     }
   }
+  return null
+}
+
+async function pickConfig(req: EncodeRequest): Promise<VideoEncoderConfig> {
+  const fps = req.timing.fpsNum / req.timing.fpsDen
+  const bitrate = req.bitrate || autoBitrate(req.width, req.height, fps)
+  const codecs = avcCodecs(req.width, req.height, fps, bitrate)
+  if (!codecs.length) {
+    throw new Error(
+      avcLevel(req.width, req.height, fps) === null
+        ? `${req.width}x${req.height} at ${fps.toFixed(2)} fps is beyond every H.264 level (the ceiling is 8192x4320).`
+        : `${(bitrate / 1e6).toFixed(0)} Mb/s is more than H.264 allows at ${req.width}x${req.height}. Lower the bitrate.`,
+    )
+  }
+  const config = await findConfig(req.width, req.height, fps, bitrate)
+  if (config) return config
   throw new Error(
     `This browser's H.264 encoder will not take ${req.width}x${req.height} (tried ${codecs.join(', ')}). ` +
       'Large walls often exceed what the built-in encoder supports; export PNGs, or render a smaller output.',
   )
+}
+
+/** One piece of a loop: where it sits in the whole raster, and the bitrate to encode it at. */
+export type VideoTile = {
+  col: number
+  row: number
+  x: number
+  y: number
+  width: number
+  height: number
+  /** Bits per second; 0 = auto for this tile's size. */
+  bitrate: number
+}
+
+/** How a loop is to be made: one tile, the whole raster, when the encoder takes it. */
+export type LoopPlan = {
+  cols: number
+  rows: number
+  tiles: VideoTile[]
+}
+
+/** The most tiles a loop is cut into before giving up. A 16384 x 16384 canvas needs 29 at Chrome's limit. */
+export const MAX_VIDEO_TILES = 64
+
+/** Narrower or shorter than this and a tile is not worth a video of its own. */
+const MIN_TILE_PX = 16
+
+/**
+ * Cut an even raster into `cols` x `rows` tiles. Cuts land on even pixels and
+ * are spaced as evenly as that allows, so the tiles differ by at most 2 px and
+ * cover the raster exactly, with no gap and no overlap. Bitrate is left at 0.
+ */
+export function tileGrid(width: number, height: number, cols: number, rows: number): VideoTile[] {
+  if (width % 2 || height % 2) throw new Error(`Tiles need an even raster, and this is ${width}x${height}.`)
+  const cuts = (total: number, n: number) => Array.from({ length: n + 1 }, (_, i) => 2 * Math.round((i * total) / (2 * n)))
+  const xs = cuts(width, cols)
+  const ys = cuts(height, rows)
+  const tiles: VideoTile[] = []
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      tiles.push({ col, row, x: xs[col]!, y: ys[row]!, width: xs[col + 1]! - xs[col]!, height: ys[row + 1]! - ys[row]!, bitrate: 0 })
+    }
+  }
+  return tiles
+}
+
+/**
+ * The grids worth trying, in the order to try them: by tile count times
+ * (1 + how far the tiles are from square, as |ln(width / height)|). Fewer tiles
+ * is better, and so is a sane shape. Count alone would cut a 16384 x 16384
+ * canvas into 29 strips 565 px wide, 29 being the fewest that fit and prime;
+ * this way it is 5 x 6. The whole raster always comes first, and 7680 x 4320
+ * in four is 2 x 2 of 3840 x 2160 rather than 4 x 1 of 1920 x 4320.
+ */
+export function tileGrids(width: number, height: number, maxTiles = MAX_VIDEO_TILES): { cols: number; rows: number }[] {
+  const grids: { cols: number; rows: number; cost: number }[] = []
+  for (let n = 1; n <= maxTiles; n++) {
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = n / cols
+      if (!Number.isInteger(rows) || width / cols < MIN_TILE_PX || height / rows < MIN_TILE_PX) continue
+      grids.push({ cols, rows, cost: n * (1 + Math.abs(Math.log(width / cols / (height / rows)))) })
+    }
+  }
+  return grids
+    // 5 x 6 and 6 x 5 are equally square, but not to the last bit of a double.
+    .sort((a, b) => (Math.abs(a.cost - b.cost) > 1e-9 ? a.cost - b.cost : 0) || a.cols * a.rows - b.cols * b.rows || a.cols - b.cols)
+    .map(({ cols, rows }) => ({ cols, rows }))
+}
+
+/**
+ * How to make this loop: whole if the browser's encoder takes it, else the
+ * fewest tiles it takes. A bitrate the user set is for the whole picture, so
+ * each tile gets its share by area and the files come to what was asked for;
+ * auto stays auto, sized for each tile. Throws, before any frame is drawn, for
+ * anything that would fail later: no encoder, an odd raster, no grid the
+ * encoder will take, or a set of files too big for the tab.
+ */
+export async function planLoop(width: number, height: number, timing: LoopTiming, bitrate: number): Promise<LoopPlan> {
+  const problem = videoProblem(width, height)
+  if (problem) throw new Error(problem)
+  const fps = timing.fpsNum / timing.fpsDen
+  const answers = new Map<string, Promise<boolean>>()
+  const takes = (w: number, h: number, bps: number) => {
+    const key = `${w}x${h}@${bps}`
+    if (!answers.has(key)) answers.set(key, findConfig(w, h, fps, bps).then((c) => c !== null))
+    return answers.get(key)!
+  }
+
+  let plan: LoopPlan | null = null
+  search: for (const { cols, rows } of tileGrids(width, height)) {
+    const tiles = tileGrid(width, height, cols, rows).map((t) => ({
+      ...t,
+      bitrate: bitrate ? Math.round((bitrate * t.width * t.height) / (width * height)) : 0,
+    }))
+    // Largest first: if any tile is refused, it is most likely that one.
+    for (const t of [...tiles].sort((a, b) => b.width * b.height - a.width * a.height)) {
+      if (!(await takes(t.width, t.height, t.bitrate || autoBitrate(t.width, t.height, fps)))) continue search
+    }
+    plan = { cols, rows, tiles }
+    break
+  }
+  if (!plan) {
+    throw new Error(
+      `This browser's H.264 encoder will not take ${width}x${height}, whole or cut into as many as ${MAX_VIDEO_TILES} tiles. ` +
+        'Export PNGs, or render a smaller output.',
+    )
+  }
+  const size = plan.tiles.reduce((sum, t) => sum + estimateLoopBytes(t.width, t.height, timing, t.bitrate), 0)
+  if (size > MAX_LOOP_BYTES) {
+    throw new Error(
+      `That loop would be about ${(size / 1024 ** 3).toFixed(1)} GB${plan.tiles.length > 1 ? ` across ${plan.tiles.length} tiles` : ''}, ` +
+        'more than a browser tab can build. Shorten it, lower the bitrate, or export a smaller output.',
+    )
+  }
+  return plan
 }
 
 /**
@@ -331,4 +468,35 @@ export async function encodeLoop(req: EncodeRequest): Promise<Uint8Array> {
     avcC: avcC as Uint8Array,
     colour: { ...BT709, fullRange: false },
   })
+}
+
+export type PlanRequest = Omit<EncodeRequest, 'width' | 'height' | 'bitrate' | 'onProgress'> & {
+  /** Frames done and total for the tile in hand, and which tile that is. */
+  onProgress?: (done: number, total: number, tile: number) => void
+}
+
+/**
+ * Encode each tile of a plan in turn, one MP4 per tile, in the plan's order.
+ * `render` draws the WHOLE picture; each tile sees it shifted so the tile's
+ * corner is at the origin, and the canvas, the size of the tile, crops the
+ * rest. A plan of one tile is the whole raster, encoded exactly as before.
+ */
+export async function encodePlan(plan: LoopPlan, req: PlanRequest): Promise<Uint8Array[]> {
+  const files: Uint8Array[] = []
+  for (const [i, tile] of plan.tiles.entries()) {
+    files.push(
+      await encodeLoop({
+        ...req,
+        width: tile.width,
+        height: tile.height,
+        bitrate: tile.bitrate,
+        render: (ctx, t) => {
+          ctx.translate(-tile.x, -tile.y)
+          req.render(ctx, t)
+        },
+        onProgress: (done, total) => req.onProgress?.(done, total, i),
+      }),
+    )
+  }
+  return files
 }

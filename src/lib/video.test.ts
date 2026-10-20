@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { autoBitrate, avcCodecs, avcLevel, estimateLoopBytes, MAX_LOOP_BYTES, rgbaToI420, videoProblem } from './video'
+import {
+  autoBitrate,
+  avcCodecs,
+  avcLevel,
+  estimateLoopBytes,
+  MAX_LOOP_BYTES,
+  planLoop,
+  rgbaToI420,
+  tileGrid,
+  tileGrids,
+  videoProblem,
+} from './video'
 import { rgbToYcbcr, unitToCode } from './colour'
 
 /** A flat RGBA image. */
@@ -136,5 +147,175 @@ describe('videoProblem', () => {
     g.VideoFrame = class {}
     expect(videoProblem(1920, 1081)).toMatch(/even width and height/)
     expect(videoProblem(1920, 1080)).toBeNull()
+  })
+})
+
+describe('tileGrid', () => {
+  it('cuts 8K into four UHD tiles', () => {
+    expect(tileGrid(7680, 4320, 2, 2).map((t) => [t.col, t.row, t.x, t.y, t.width, t.height])).toEqual([
+      [0, 0, 0, 0, 3840, 2160],
+      [1, 0, 3840, 0, 3840, 2160],
+      [0, 1, 0, 2160, 3840, 2160],
+      [1, 1, 3840, 2160, 3840, 2160],
+    ])
+  })
+
+  it.each([
+    [10000, 2002, 3, 1],
+    [7682, 4322, 2, 2],
+    [5762, 1202, 7, 3],
+    [16384, 16384, 5, 6],
+  ])('covers %ix%i in %ix%i with even tiles, no gap, no overlap, sizes within 2 px', (w, h, cols, rows) => {
+    const tiles = tileGrid(w, h, cols, rows)
+    expect(tiles).toHaveLength(cols * rows)
+    let area = 0
+    for (const t of tiles) {
+      // Even sides and offsets keep each tile's 2x2 chroma blocks the whole raster's.
+      for (const v of [t.x, t.y, t.width, t.height]) expect(v % 2).toBe(0)
+      area += t.width * t.height
+    }
+    expect(area).toBe(w * h)
+    for (let row = 0; row < rows; row++) {
+      const line = tiles.filter((t) => t.row === row)
+      line.forEach((t, i) => expect(t.x).toBe(i ? line[i - 1]!.x + line[i - 1]!.width : 0))
+      expect(line.at(-1)!.x + line.at(-1)!.width).toBe(w)
+    }
+    const widths = tiles.map((t) => t.width)
+    const heights = tiles.map((t) => t.height)
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2)
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(2)
+  })
+
+  it('refuses an odd raster, which no set of even tiles can cover', () => {
+    expect(() => tileGrid(1921, 1080, 2, 1)).toThrow(/even raster/)
+  })
+})
+
+describe('tileGrids', () => {
+  it('tries the whole raster first, then few tiles of a sane shape', () => {
+    const order = tileGrids(7680, 4320).map((g) => `${g.cols}x${g.rows}`)
+    expect(order.slice(0, 5)).toEqual(['1x1', '2x1', '1x2', '3x1', '2x2'])
+    // Four tiles: UHD-shaped before tall strips or wide ones.
+    expect(order.indexOf('2x2')).toBeLessThan(order.indexOf('4x1'))
+    expect(order.indexOf('4x1')).toBeLessThan(order.indexOf('1x4'))
+  })
+
+  it.each([
+    [16000, 1000],
+    [1000, 16000],
+    [7680, 4320],
+    [17, 4000],
+  ])('always tries %ix%i whole before cutting it', (w, h) => {
+    expect(tileGrids(w, h)[0]).toEqual({ cols: 1, rows: 1 })
+  })
+
+  it('will not cut a picture into slivers to save a tile', () => {
+    // 29 is the fewest 9.4 MP tiles that cover 16384 x 16384, and prime.
+    const order = tileGrids(16384, 16384).map((g) => `${g.cols}x${g.rows}`)
+    expect(order.indexOf('5x6')).toBeLessThan(order.indexOf('29x1'))
+    expect(order.indexOf('5x6')).toBeLessThan(order.indexOf('1x29'))
+  })
+
+  it('prefers wider tiles when two shapes are equally square', () => {
+    expect(tileGrids(4096, 4096)[1]).toEqual({ cols: 1, rows: 2 })
+  })
+
+  it('never offers a tile narrower than a macroblock', () => {
+    expect(tileGrids(64, 32).every((g) => 64 / g.cols >= 16 && 32 / g.rows >= 16)).toBe(true)
+  })
+})
+
+describe('planLoop', () => {
+  const g = globalThis as Record<string, unknown>
+  const timing = { frames: 300, fpsNum: 30, fpsDen: 1, seconds: 10 }
+  const asked: { width: number; height: number; bitrate: number }[] = []
+  /** Measured in Chrome 152 on a Mac: H.264 up to 4096 x 2304 of area, whatever the shape. */
+  function chrome152(maxArea = 4096 * 2304) {
+    g.VideoFrame = class {}
+    g.VideoEncoder = {
+      isConfigSupported: async (c: VideoEncoderConfig) => {
+        asked.push({ width: c.width, height: c.height, bitrate: c.bitrate ?? 0 })
+        return { supported: c.width * c.height <= maxArea, config: c }
+      },
+    }
+  }
+  afterEach(() => {
+    delete g.VideoEncoder
+    delete g.VideoFrame
+    asked.length = 0
+  })
+
+  it('keeps a raster the encoder takes whole as one file, at the bitrate asked for', async () => {
+    chrome152()
+    const plan = await planLoop(3840, 2160, timing, 50e6)
+    expect(plan.tiles).toEqual([{ col: 0, row: 0, x: 0, y: 0, width: 3840, height: 2160, bitrate: 50e6 }])
+    expect(await planLoop(4096, 2304, timing, 0)).toMatchObject({ cols: 1, rows: 1 })
+    expect(await planLoop(8192, 1080, timing, 0)).toMatchObject({ cols: 1, rows: 1 })
+  })
+
+  it.each([
+    [7680, 4320, 2, 2, 3840, 2160],
+    [8192, 2160, 2, 1, 4096, 2160],
+    [15360, 2160, 4, 1, 3840, 2160],
+    [2160, 7680, 1, 2, 2160, 3840],
+    [4096, 2306, 2, 1, 2048, 2306],
+  ])('cuts %ix%i into %ix%i tiles of %ix%i', async (w, h, cols, rows, tw, th) => {
+    chrome152()
+    const plan = await planLoop(w, h, timing, 0)
+    expect([plan.cols, plan.rows]).toEqual([cols, rows])
+    expect([plan.tiles[0]!.width, plan.tiles[0]!.height]).toEqual([tw, th])
+  })
+
+  it('cuts the largest canvas into 5 x 6, not 29 slivers', async () => {
+    chrome152()
+    // One second: at ten, thirty tiles of auto bitrate are 2.6 GB.
+    const plan = await planLoop(16384, 16384, { frames: 30, fpsNum: 30, fpsDen: 1, seconds: 1 }, 0)
+    expect([plan.cols, plan.rows]).toEqual([5, 6])
+    expect(plan.tiles.every((t) => t.width * t.height <= 4096 * 2304)).toBe(true)
+  })
+
+  it('shares a bitrate set by hand across the tiles by area, so the set comes to what was asked', async () => {
+    chrome152()
+    const plan = await planLoop(7680, 4320, timing, 80e6)
+    expect(plan.tiles.map((t) => t.bitrate)).toEqual([20e6, 20e6, 20e6, 20e6])
+  })
+
+  it('leaves an automatic bitrate automatic, sized for each tile', async () => {
+    chrome152()
+    const plan = await planLoop(7680, 4320, timing, 0)
+    expect(plan.tiles.every((t) => t.bitrate === 0)).toBe(true)
+    expect(asked.at(-1)!.bitrate).toBe(autoBitrate(3840, 2160, 30))
+  })
+
+  it('asks once per tile size and moves on at the first refusal', async () => {
+    chrome152()
+    await planLoop(7680, 4320, timing, 0)
+    const sizes = asked.map((a) => `${a.width}x${a.height}`)
+    // 1x1, 2x1, 1x2, 3x1 are refused on all three profiles; 2x2 passes on
+    // High, and its four identical tiles are one question.
+    expect(sizes).toEqual([
+      ...Array(3).fill('7680x4320'),
+      ...Array(3).fill('3840x4320'),
+      ...Array(3).fill('7680x2160'),
+      ...Array(3).fill('2560x4320'),
+      '3840x2160',
+    ])
+  })
+
+  it('refuses before frame 0 when no grid fits', async () => {
+    chrome152(0)
+    await expect(planLoop(1920, 1080, timing, 0)).rejects.toThrow(/will not take 1920x1080, whole or cut into as many as 64 tiles/)
+  })
+
+  it('refuses a set of tiles too big for the tab, all of them counted', async () => {
+    chrome152()
+    const long = { frames: 18000, fpsNum: 30, fpsDen: 1, seconds: 600 }
+    await expect(planLoop(7680, 4320, long, 0)).rejects.toThrow(/GB across 4 tiles/)
+  })
+
+  it('still refuses an odd raster and a browser with no encoder', async () => {
+    await expect(planLoop(1920, 1080, timing, 0)).rejects.toThrow(/no video encoder/)
+    chrome152()
+    await expect(planLoop(1920, 1081, timing, 0)).rejects.toThrow(/even width and height/)
   })
 })
