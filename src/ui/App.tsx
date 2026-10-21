@@ -30,7 +30,7 @@ import { isAnimated } from '../patterns/env'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
 import { encodePlan, MAX_LOOP_BYTES, planBytes, planLoop, type EncodeRequest, type LoopPlan } from '../lib/video'
-import { audioProblem, encodeLoopAudio, type EncodedAudio } from '../lib/audio'
+import { AAC_BITRATE, audioProblem, encodeLoopAudio, type EncodedAudio } from '../lib/audio'
 import { uniqueNames } from '../lib/zip'
 import { clearImage, decodeImage, loadImage } from '../state/image-store'
 
@@ -129,7 +129,7 @@ export default function App() {
     const range = canvasRange(settings)
     const bitrate = Math.max(0, settings.animation.bitrateMbps) * 1e6
     // Sound, for the patterns that have it: refused up front if the browser can't, encoded once for every file.
-    const sound = patternAudio(settings)
+    let sound = patternAudio(settings)
     if (sound) {
       const problem = await audioProblem(sound)
       if (problem) throw new Error(problem)
@@ -173,7 +173,9 @@ export default function App() {
     }
     // Every finished file is held until the ZIP is built, so the limit on one
     // loop is the limit on all of them together.
-    const total = plans.reduce((sum, p) => sum + planBytes(p, timing), 0)
+    // The sound goes into every file and every tile: 192 kb/s of AAC each.
+    const soundBytes = sound ? (AAC_BITRATE / 8) * timing.seconds : 0
+    const total = plans.reduce((sum, p) => sum + planBytes(p, timing) + soundBytes * p.tiles.length, 0)
     if (total > MAX_LOOP_BYTES) {
       throw new Error(
         `Those ${jobs.length} loops would come to about ${(total / 1024 ** 3).toFixed(1)} GB together, more than a browser tab can build. ` +
@@ -192,7 +194,12 @@ export default function App() {
     let audio: EncodedAudio | undefined
     if (sound) {
       setBusy('Encoding the sound…')
-      audio = await encodeLoopAudio(sound)
+      audio = await encodeLoopAudio(sound, (done, total) => {
+        if (cancel.current) throw new Cancelled('Cancelled.')
+        setBusy(`Encoding the sound — ${Math.round((done / total) * 100)}%`)
+      })
+      // The samples are done with; a ten-minute loop's are over 100 MB.
+      sound = null
     }
 
     const files: { name: string; data: Uint8Array }[] = []

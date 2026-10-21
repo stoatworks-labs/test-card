@@ -17,7 +17,17 @@
  *           stbl
  *             stsd/avc1 (avcC, colr, pasp)
  *             stts, stss, stsc, stsz, stco
- *   mdat
+ *     trak                      (only with sound)
+ *       tkhd
+ *       edts/elst               skip the encoder's priming
+ *       mdia
+ *         mdhd, hdlr
+ *         minf
+ *           smhd, dinf/dref
+ *           stbl
+ *             stsd/mp4a (esds)
+ *             stts, stsc, stsz, stco, sgpd/sbgp (roll -1)
+ *   mdat                        both tracks' samples, in time order
  *
  * moov goes BEFORE mdat ("fast start"), so a player or a media server can read
  * the index without seeking to the end of the file. Every sample has the same
@@ -226,7 +236,10 @@ function audioTrak(audio: Mp4Audio, offsets: number[], movieTimescale: number): 
 function buildMoov(samples: Mp4Sample[], opts: Mp4Options, offsets: number[], audio?: Mp4Audio, audioOffsets: number[] = []): Uint8Array {
   const n = samples.length
   const mediaDuration = n * opts.sampleDuration
-  const movieTimescale = 1000
+  // With sound, the movie counts in samples, so the edit list says exactly how much to play:
+  // in milliseconds it rounded, and a rounding up past a packet boundary pulled in a whole
+  // extra packet a loop. Without sound it stays 1000, so a silent file is as it always was.
+  const movieTimescale = audio ? audio.sampleRate : 1000
   const videoDuration = Math.round((mediaDuration / opts.timescale) * movieTimescale)
   const audioDuration = audio ? Math.round((audio.length / audio.sampleRate) * movieTimescale) : 0
   const movieDuration = Math.max(videoDuration, audioDuration)

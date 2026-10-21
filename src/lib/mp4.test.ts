@@ -218,12 +218,13 @@ describe.skipIf(!has('ffprobe') || !has('ffmpeg'))('buildMp4 — read by ffmpeg'
 
 /**
  * Sound. The fixture is ffmpeg's own AAC encoder (scripts/make-aac-fixture.sh):
- * two seconds of 48 kHz stereo with a beep starting at exactly 0.5 s and 1.5 s.
- * ffmpeg's encoder primes 1024 samples, so the file must say to skip 1024, and
- * decoded from the MP4 the beeps must start where they were put.
+ * two seconds of 48 kHz stereo with a beep starting at exactly 0.5 s and 1.5 s,
+ * behind 256 samples of silence. ffmpeg's encoder primes 1024 samples, so the file
+ * must skip 1024 + 256, and decoded from the MP4 the beeps must start where they
+ * were put. 1280 + 96000 is exactly 95 packets, as alignToPackets arranges.
  */
 const AAC_FIXTURE = join(__dirname, '../../test/fixtures/aac-48k-stereo.aac')
-const AAC_PRIMING = 1024
+const AAC_SKIP = 1024 + 256
 
 /** ADTS frames to raw AAC frames, and the AudioSpecificConfig the ADTS headers describe. */
 function fromAdts(bytes: Uint8Array): { frames: Uint8Array[]; asc: Uint8Array } {
@@ -247,7 +248,7 @@ function fromAdts(bytes: Uint8Array): { frames: Uint8Array[]; asc: Uint8Array } 
 }
 
 const adts = fromAdts(new Uint8Array(readFileSync(AAC_FIXTURE)))
-const sound = { ...adts, sampleRate: 48000, channels: 2, bitrate: 128000, delay: AAC_PRIMING, length: 96000 }
+const sound = { ...adts, sampleRate: 48000, channels: 2, bitrate: 128000, delay: AAC_SKIP, length: 96000 }
 const withSound = buildMp4(samples, { width: 64, height: 48, timescale: 10000, sampleDuration: 1000, avcC, colour: { ...BT709, fullRange: false } }, sound)
 const soundBoxes = parse(withSound)
 const audioTrak = () => soundBoxes.find((b) => b.type === 'moov')!.children!.filter((b) => b.type === 'trak')[1]!
@@ -261,11 +262,22 @@ describe('buildMp4 — with sound', () => {
     expect(String.fromCharCode(...audioPath('mdia', 'hdlr').body.subarray(8, 12))).toBe('soun')
   })
 
-  it('skips the priming with an edit list, then plays the loop\'s length', () => {
+  it('skips the priming with an edit list, then plays exactly the loop\'s length, counted in samples', () => {
+    expect(u32(find(soundBoxes, ['moov', 'mvhd']).body, 12)).toBe(48000)
     const elst = audioPath('edts', 'elst').body
     expect(u32(elst, 4)).toBe(1)
-    expect(u32(elst, 8)).toBe(2000) // ms, the movie timescale
-    expect(u32(elst, 12)).toBe(AAC_PRIMING)
+    expect(u32(elst, 8)).toBe(96000)
+    expect(u32(elst, 12)).toBe(AAC_SKIP)
+    // And the edit ends on a packet boundary, or ffmpeg keeps the rest of the packet every loop.
+    expect((AAC_SKIP + 96000) % 1024).toBe(0)
+  })
+
+  it('points every video frame\'s offset at that frame\'s bytes, among the sound', () => {
+    const stco = find(soundBoxes, ['moov', 'trak', 'mdia', 'minf', 'stbl', 'stco']).body
+    samples.forEach((sample, i) => {
+      const at = u32(stco, 8 + i * 4)
+      expect(withSound.subarray(at, at + sample.data.length)).toEqual(sample.data)
+    })
   })
 
   it('marks every frame as needing the one before, as Apple\'s encoder does, so AVFoundation trims only once', () => {
@@ -312,6 +324,33 @@ describe.skipIf(!has('ffprobe') || !has('ffmpeg'))('buildMp4 — sound read by f
     expect(Number(a.start_time)).toBe(0)
     expect(Number(a.duration)).toBeCloseTo(2, 3)
     expect(Number(json.format.duration)).toBeCloseTo(2, 3)
+  })
+
+  it('decodes the video to exactly the frames the raw stream decodes to, sound and all', () => {
+    const md5 = (input: string, ...pre: string[]) =>
+      execFileSync('ffmpeg', ['-v', 'error', ...pre, '-i', input, '-map', '0:v', '-f', 'framemd5', '-'])
+        .toString()
+        .split('\n')
+        .filter((l) => l && !l.startsWith('#'))
+        .map((l) => l.split(',').pop()!.trim())
+    expect(md5(file)).toEqual(md5(FIXTURE, '-f', 'h264'))
+  })
+
+  it('keeps the beeps on time when ffmpeg loops the file, rather than drifting a little later each time', () => {
+    const pcm = new Float32Array(
+      new Uint8Array(execFileSync('ffmpeg', ['-v', 'error', '-stream_loop', '2', '-i', file, '-map', '0:a', '-ac', '1', '-f', 'f32le', '-'], { maxBuffer: 1 << 26 })).buffer,
+    )
+    const peak = pcm.reduce((m, v) => Math.max(m, Math.abs(v)), 0)
+    const onsets: number[] = []
+    let last = -Infinity
+    pcm.forEach((v, i) => {
+      if (Math.abs(v) > peak * 0.1) {
+        if (i - last > 4800) onsets.push(i / 48000)
+        last = i
+      }
+    })
+    expect(onsets).toHaveLength(6)
+    onsets.forEach((t, k) => expect(Math.abs(t - (0.5 + k))).toBeLessThan(0.001))
   })
 
   it('starts each beep where it was put, so the priming really is skipped', () => {

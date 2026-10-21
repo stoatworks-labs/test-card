@@ -85,7 +85,7 @@ export function syncAudio(timing: LoopTiming, opts: AvSyncOptions, sampleRate = 
   const frameSamples = (sampleRate * timing.fpsDen) / timing.fpsNum
   const beep = Math.max(1, Math.round(frameSamples))
   const ramp = Math.max(1, Math.round(sampleRate * 0.001))
-  const hz = Math.max(20, Math.min(20000, opts.toneHz))
+  const hz = beepHz(opts)
   for (const f of syncFrames(timing, opts.everySeconds)) {
     const start = Math.round(f * frameSamples)
     for (let i = 0; i < beep; i++) {
@@ -95,6 +95,16 @@ export function syncAudio(timing: LoopTiming, opts: AvSyncOptions, sampleRate = 
     }
   }
   return pcm
+}
+
+/** The beep's pitch, held to what can be timed in a frame and heard through anything. */
+export function beepHz(opts: AvSyncOptions): number {
+  return Number.isFinite(opts.toneHz) ? Math.max(100, Math.min(10000, Math.round(opts.toneHz))) : 1000
+}
+
+/** The real time between sync frames, which a whole number of them per loop can make differ from the setting. */
+export function syncInterval(timing: LoopTiming, everySeconds: number): number {
+  return timing.seconds / syncFrames(timing, everySeconds).length
 }
 
 /** Where everything goes. Pure, so the tests can check it without a canvas. */
@@ -193,7 +203,9 @@ export function drawAvSync(
     }
   }
 
-  const caption = `AV sync · beep and flash every ${opts.everySeconds} s · ${opts.toneHz} Hz at ${BEEP_DBFS} dBFS · frame ${n + 1} of ${timing.frames}`
+  // What the file really does: a whole number of sync frames per loop can stretch the interval.
+  const every = +syncInterval(timing, opts.everySeconds).toFixed(3)
+  const caption = `AV sync · beep and flash every ${every} s · ${beepHz(opts)} Hz at ${BEEP_DBFS} dBFS · frame ${n + 1} of ${timing.frames}`
   const size = fitTextSize([caption], L.title.width * 0.9, L.title.height * 0.7, (line, s) => {
     ctx.font = `${s}px ${SANS}`
     return ctx.measureText(line).width

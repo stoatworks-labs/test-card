@@ -329,6 +329,26 @@ to +0.23; 25, +0.17 to +0.23. AVFoundation, 30 fps with the roll group: beeps at
 tone: -17.99 dBFS RMS-as-peak, 1 kHz. First and last 100 ms silent. ffprobe:
 both streams start at 0 and last 10.000 s (10.010 at 29.97).
 
+An independent review then found the one thing a single pass can't show: looped
+by ffmpeg (`-stream_loop`), the sound drifted later every time round, 4 ms a loop
+at 30 fps and 15 ms at 29.97, so a frame out by the fourth. The edit list's end
+fell part way through an AAC packet; AVFoundation stops there to the sample,
+ffmpeg keeps the whole packet. Fixed by padding the front so priming, padding
+and loop end on a packet boundary, and by counting the movie in samples when
+there's sound (in milliseconds the duration rounded, and rounding up pulls in a
+whole packet). Re-exported at 29.97 through the app: the edit skips 2848
+(2112 + 736) and plays 480480 samples, ending on packet 472; ffmpeg +0.21 to
++0.23 ms single pass and +0.225 ms on each of four passes looped; AVFoundation
+beeps at 0.5007, 1.5017 ... against sync frames at 0.5005, 1.5015 ... The
+review also re-muxed the 25 and 29.97 exports' streams and read them through an
+AVAssetReader: +0.2 ms, so the guide's claim for those rates holds. Also from
+it: the priming measurement now refuses anything under one packet (a decoder
+that trims would otherwise pass), the caption gives the real interval (a 17 s
+loop "every 7 s" flashes every 8.5), the pitch is clamped to 100 Hz–10 kHz, and
+the sound encode has back-pressure, progress, Cancel and frees its samples.
+
 Not run: Resolume itself, a camera filming a screen, Windows (whose AAC
-encoder will prime differently; that's what the measurement is for).
+encoder will prime differently; that's what the measurement is for). A hunch
+from the review, unchecked: Windows Media Foundation might ignore the edit
+list's start, which would put the sound 44 ms late there.
 

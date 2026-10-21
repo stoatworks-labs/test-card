@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { installPath2D, RecordingContext } from '../../test/recording-context'
 import { DEFAULT_SETTINGS } from '../state/defaults'
-import { BEEP_DBFS, drawAvSync, frameAt, framesFromSync, SAMPLE_RATE, SCALE_FRAMES, sweep, syncAudio, syncFrames } from './avsync'
+import { beepHz, BEEP_DBFS, drawAvSync, frameAt, framesFromSync, SAMPLE_RATE, SCALE_FRAMES, sweep, syncAudio, syncFrames, syncInterval } from './avsync'
 import { isAnimated, plainEnv } from './env'
-import { loopTiming } from './loop'
+import { frameTime, loopTiming } from './loop'
 import { patternAudio } from './render'
 
 installPath2D()
@@ -77,6 +77,24 @@ describe('AV sync sound', () => {
     expect(stray).toBe(0)
   })
 
+  it.each(RATES)('starts each beep on the sample nearest the start of its frame at %s fps, by the loop\'s own clock', (fps) => {
+    const timing = loopTiming({ seconds: 10, fps })
+    const pcm = syncAudio(timing, opts)
+    for (const f of syncFrames(timing, 1)) {
+      // frameTime is loop.ts's, not the beep's own arithmetic.
+      const start = Math.round(frameTime(f, timing) * SAMPLE_RATE)
+      expect(pcm.subarray(start - 50, start + 1).every((v) => v === 0)).toBe(true)
+      expect(Math.abs(pcm[start + 2]!)).toBeGreaterThan(0)
+    }
+  })
+
+  it('holds the pitch to something that can be timed and heard', () => {
+    expect(beepHz({ ...opts, toneHz: 0 })).toBe(100)
+    expect(beepHz({ ...opts, toneHz: 50000 })).toBe(10000)
+    expect(beepHz({ ...opts, toneHz: Number.NaN })).toBe(1000)
+    expect(beepHz({ ...opts, toneHz: 1000 })).toBe(1000)
+  })
+
   it('is a 1 kHz tone at -18 dBFS', () => {
     const timing = loopTiming({ seconds: 10, fps: '25' })
     const pcm = syncAudio(timing, opts)
@@ -112,6 +130,30 @@ describe('AV sync picture', () => {
     expect(whites(draw(syncs[0]!))).toBeGreaterThanOrEqual(2)
     expect(whites(draw(syncs[0]! - 1))).toBeLessThan(2)
     expect(whites(draw(syncs[0]! + 1))).toBeLessThan(2)
+  })
+
+  it.each(['29.97', '25', '59.94'] as const)('flashes on exactly the frames the sound beeps on, at %s fps', (fps) => {
+    const anim = { ...DEFAULT_SETTINGS.animation, fps, seconds: 10 }
+    const tm = loopTiming(anim)
+    const pcm = syncAudio(tm, opts)
+    const perFrame = (SAMPLE_RATE * tm.fpsDen) / tm.fpsNum
+    for (let n = 0; n < tm.frames; n++) {
+      const rec = new RecordingContext()
+      drawAvSync(rec.ctx, 640, 360, opts, anim, DEFAULT_SETTINGS.centre, plainEnv(640, 360, { t: frameTime(n, tm), loopSeconds: tm.seconds }))
+      const flashed = whites(rec) >= 2
+      // Does any sound start during this frame?
+      const from = Math.round(n * perFrame)
+      const beeps = pcm[from]! === 0 && pcm.subarray(from, from + 4).some((v) => v !== 0)
+      expect(flashed).toBe(beeps)
+    }
+  })
+
+  it('says the interval the file really has, not just the setting', () => {
+    const tm = loopTiming({ seconds: 17, fps: '25' })
+    expect(syncInterval(tm, 7)).toBeCloseTo(8.5, 9)
+    const rec = new RecordingContext()
+    drawAvSync(rec.ctx, 1920, 1080, { ...opts, everySeconds: 7 }, { ...DEFAULT_SETTINGS.animation, seconds: 17, fps: '25' }, DEFAULT_SETTINGS.centre, plainEnv(1920, 1080, { loopSeconds: tm.seconds }))
+    expect(rec.drawn.some((d) => d.op.includes('every 8.5 s'))).toBe(true)
   })
 
   it('lights the box for how many frames from the sync frame this is', () => {

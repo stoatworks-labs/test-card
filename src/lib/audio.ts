@@ -45,8 +45,35 @@ export function peakIndex(pcm: Float32Array): number {
   return at
 }
 
+/**
+ * 192 kb/s is one of the four bitrates Windows' Media Foundation AAC encoder accepts
+ * (96, 128, 160, 192), which is what Chrome uses there. Don't change it casually.
+ */
+export const AAC_BITRATE = 192_000
+
 function config(audio: Pick<LoopAudio, 'sampleRate' | 'channels'>): AudioEncoderConfig {
-  return { codec: AAC_CODEC, sampleRate: audio.sampleRate, numberOfChannels: audio.channels, bitrate: 192_000 }
+  return { codec: AAC_CODEC, sampleRate: audio.sampleRate, numberOfChannels: audio.channels, bitrate: AAC_BITRATE }
+}
+
+/**
+ * Silence to put in front of the sound so the priming, the padding and the loop
+ * together end exactly on a packet boundary, and where the file should then start
+ * playing. An edit that ends part way through a packet is obeyed to the sample by
+ * AVFoundation, but ffmpeg keeps that whole last packet, so a file looped by ffmpeg
+ * gained the rest of it every time round: 4 ms a loop at 30 fps, 15 ms at 29.97.
+ */
+export function alignToPackets(delay: number, length: number): { pad: number; mediaTime: number } {
+  const pad = (AAC_FRAME - ((delay + length) % AAC_FRAME)) % AAC_FRAME
+  return { pad, mediaTime: delay + pad }
+}
+
+/** Let the page breathe between batches, without a timer that a background tab would throttle. */
+function yieldToPage(): Promise<void> {
+  return new Promise((resolve) => {
+    const ch = new MessageChannel()
+    ch.port1.onmessage = () => resolve()
+    ch.port2.postMessage(0)
+  })
 }
 
 /** Why this browser can't make the sound, or null if it can. */
@@ -58,8 +85,12 @@ export async function audioProblem(audio: Pick<LoopAudio, 'sampleRate' | 'channe
   return support.supported ? null : 'This browser cannot encode AAC audio, which this loop needs. Chrome or Edge on a Mac or on Windows can.'
 }
 
-/** Encode one channel's samples, copied to every channel, in AAC_FRAME blocks. */
-async function encode(audio: LoopAudio): Promise<{ frames: Uint8Array[]; asc: Uint8Array }> {
+/**
+ * Encode one channel's samples, copied to every channel, in AAC_FRAME blocks, a few
+ * at a time so a ten-minute loop isn't queued all at once. `onProgress` may throw to
+ * cancel; the encoder is closed whatever happens.
+ */
+async function encode(audio: LoopAudio, onProgress?: (done: number, total: number) => void): Promise<{ frames: Uint8Array[]; asc: Uint8Array }> {
   const frames: Uint8Array[] = []
   let asc: Uint8Array | null = null
   let failure: Error | null = null
@@ -80,11 +111,16 @@ async function encode(audio: LoopAudio): Promise<{ frames: Uint8Array[]; asc: Ui
       failure = e instanceof Error ? e : new Error(String(e))
     },
   })
-  encoder.configure(config(audio))
   const { pcm, channels, sampleRate } = audio
   try {
+    encoder.configure(config(audio))
     for (let at = 0; at < pcm.length; at += AAC_FRAME) {
+      while (encoder.encodeQueueSize > 16) await yieldToPage()
       if (failure) throw failure
+      if (at % (AAC_FRAME * 256) === 0) {
+        onProgress?.(at, pcm.length)
+        await yieldToPage()
+      }
       const n = Math.min(AAC_FRAME, pcm.length - at)
       const planar = new Float32Array(n * channels)
       for (let c = 0; c < channels; c++) planar.set(pcm.subarray(at, at + n), c * n)
@@ -123,8 +159,8 @@ async function decode(frames: Uint8Array[], asc: Uint8Array, audio: Pick<LoopAud
       failure = e instanceof Error ? e : new Error(String(e))
     },
   })
-  decoder.configure({ codec: AAC_CODEC, sampleRate: audio.sampleRate, numberOfChannels: audio.channels, description: asc })
   try {
+    decoder.configure({ codec: AAC_CODEC, sampleRate: audio.sampleRate, numberOfChannels: audio.channels, description: asc })
     frames.forEach((data, i) =>
       decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: Math.round((i * AAC_FRAME * 1e6) / audio.sampleRate), data })),
     )
@@ -149,19 +185,26 @@ export async function measureDelay(audio: Pick<LoopAudio, 'sampleRate' | 'channe
   pcm[click] = 0.9
   const { frames, asc } = await encode({ ...audio, pcm })
   const delay = peakIndex(await decode(frames, asc, audio)) - click
-  if (delay < 0 || delay > 8 * AAC_FRAME) {
+  // AAC-LC can't start sooner than one frame in: a smaller answer means a decoder that
+  // trimmed some priming itself, or dropped its first output, and an edit list built
+  // on it would be wrong without anything saying so.
+  if (delay < AAC_FRAME || delay > 8 * AAC_FRAME) {
     throw new Error(`The audio encoder's start-up delay measured ${delay} samples, which can't be right; not writing a file whose sync can't be trusted.`)
   }
   return delay
 }
 
-export async function encodeLoopAudio(audio: LoopAudio): Promise<EncodedAudio> {
+export async function encodeLoopAudio(audio: LoopAudio, onProgress?: (done: number, total: number) => void): Promise<EncodedAudio> {
   const problem = await audioProblem(audio)
   if (problem) throw new Error(problem)
   const delay = await measureDelay(audio)
-  const { frames, asc } = await encode(audio)
-  if (frames.length * AAC_FRAME < delay + audio.pcm.length) {
+  const length = audio.pcm.length
+  const { pad, mediaTime } = alignToPackets(delay, length)
+  const padded = new Float32Array(pad + length)
+  padded.set(audio.pcm, pad)
+  const { frames, asc } = await encode({ ...audio, pcm: padded }, onProgress)
+  if (frames.length * AAC_FRAME < mediaTime + length) {
     throw new Error(`The audio encoder returned ${frames.length} frames, too few to hold the loop.`)
   }
-  return { frames, asc, sampleRate: audio.sampleRate, channels: audio.channels, bitrate: 192_000, delay, length: audio.pcm.length }
+  return { frames, asc, sampleRate: audio.sampleRate, channels: audio.channels, bitrate: AAC_BITRATE, delay: mediaTime, length }
 }

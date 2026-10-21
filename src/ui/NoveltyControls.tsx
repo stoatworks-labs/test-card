@@ -381,7 +381,13 @@ export function AvSyncControls({ opts, patch }: { opts: PatternSettings['avSync'
           max={10}
           onChange={(everySeconds) => patch({ everySeconds: Math.max(1, Math.round(everySeconds)) })}
         />
-        <Num label="Beep pitch (Hz)" value={opts.toneHz} min={100} max={10000} onChange={(toneHz) => patch({ toneHz })} />
+        <Num
+          label="Beep pitch (Hz)"
+          value={opts.toneHz}
+          min={100}
+          max={10000}
+          onChange={(toneHz) => patch({ toneHz: Number.isFinite(toneHz) ? Math.max(100, Math.min(10000, Math.round(toneHz))) : 1000 })}
+        />
       </div>
       <p className="hint">
         The MP4 has sound: a one-frame beep at -18 dBFS on every flash. Film the screen with sound, find

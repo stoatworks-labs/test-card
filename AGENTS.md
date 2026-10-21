@@ -243,6 +243,13 @@ disabling that group in an `afconvert` file, which then went early too. Keep bot
 any change to the audio track in both players (`scratchpad`-style: decode with ffmpeg, read with an
 AVAssetReader), not one.
 
+**The edit must end on a packet boundary, exactly.** AVFoundation stops at the edit's end to the
+sample; ffmpeg keeps the whole packet the end falls in, so a file it loops gained the rest of that
+packet every time round (15 ms a loop at 29.97). `alignToPackets` puts silence in front so priming,
+padding and loop end on a boundary, and with sound the movie timescale is the sample rate: in
+milliseconds the duration rounded, and rounding up past a boundary pulled in a whole extra packet.
+`mp4.test.ts` loops the fixture through ffmpeg three times to hold both.
+
 **Dead trees are cached as `Path2D`s.** A Halloween dead tree is a few hundred polygons and
 never changes, so `drawTree` builds it once at its own origin, keyed by seed, size (to a quarter
 pixel) and forking depth, and fills it in one go. Every polygon is wound the same way first
@@ -288,7 +295,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 292 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 427 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with
