@@ -139,6 +139,7 @@ export type PatternKind =
   | 'haunted-house'
   // Classic and technical.
   | 'classic-card'
+  | 'levels-check'
 
 /**
  * Output level range.
@@ -375,6 +376,11 @@ export type ClassicCardOptions = {
   ident: boolean
 }
 
+export type LevelsCheckOptions = {
+  /** Write what each result means on the card itself. */
+  notes: boolean
+}
+
 export type PumpkinFace = 'classic' | 'fierce' | 'happy' | 'surprised' | 'sly' | 'goofy'
 
 export type PumpkinOptions = {
@@ -476,6 +482,7 @@ export type PatternSettings = {
   pumpkins: PumpkinOptions
   centre: CentreOptions
   classic: ClassicCardOptions
+  levelsCheck: LevelsCheckOptions
   ocean: OceanOptions
   scene: SceneOptions
   broken: BrokenWallOptions

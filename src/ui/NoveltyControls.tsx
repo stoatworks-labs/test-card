@@ -369,6 +369,21 @@ export function ClassicControls({ opts, patch }: { opts: PatternSettings['classi
   )
 }
 
+export function LevelsControls({ opts, patch }: { opts: PatternSettings['levelsCheck']; patch: Patch }) {
+  return (
+    <>
+      <h3>Levels check</h3>
+      <Check label="Explain the results on the card" checked={opts.notes} onChange={(notes) => patch({ notes })} />
+      <p className="hint">
+        Always full range, whatever the level setting below says: the question is what the chain
+        does to a full-range picture. Squares vanishing into the black and white means the receiving
+        end is stretching limited to full; grey blacks and dull whites with every square still there
+        mean the sending end is squashing to limited.
+      </p>
+    </>
+  )
+}
+
 /** What goes in the middle: the logo, your picture, or your words. */
 export function CentreControls({
   opts,

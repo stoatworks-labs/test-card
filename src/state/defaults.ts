@@ -105,6 +105,8 @@ export const DEFAULT_SETTINGS: PatternSettings = {
 
   classic: { barsPct: 75, ident: true },
 
+  levelsCheck: { notes: true },
+
   ocean: { seed: 1, time: 'sunset', swell: 1 },
 
   scene: { seed: 1, speed: 3 },

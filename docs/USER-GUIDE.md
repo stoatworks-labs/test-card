@@ -45,6 +45,7 @@ nothing is uploaded.
 | **Solid field** | Flat colour at a chosen level, for dead pixels and uniformity. |
 | **Greyscale** | Continuous ramp or stepped wedge, optionally split into R, G, B and neutral. |
 | **Pixel check** | 1px checkerboard and line bursts. **If it renders as flat grey on the real output, something in the chain is scaling.** |
+| **Levels check** | Full or limited range, and which end has it wrong. See below. |
 | **Classic test card** | A grey grid, castellated edges and a big circle holding colour bars, gratings from 8 px down to 1 px, a picture panel, six greyscale steps and the output's name. See below. |
 
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
@@ -75,6 +76,34 @@ the panel. Set the panel's **Background**, and the text's colour.
 
 The card is always drawn in full range, whatever the level setting says. For checking levels, use
 the bars, the greyscale, or the **levels check**.
+
+### The levels check
+
+Full or limited range is the setting everybody has an opinion about and nobody can see. A GPU,
+a media server output, a converter, a processor input and a display can each be set either way,
+or to "auto", which means "guess", and the picture only looks right when the two ends of each
+link agree.
+
+The levels check is a row of near-black squares on black (codes 2 to 32) and a row of near-white
+squares on white (223 to 253), each labelled, with the limited-range edges (16 and 235) picked
+out. It's always drawn in full range, since a media server plays a full-range picture.
+
+![The levels check as it should look, crushed by a receiver stretching limited to full, and washed out by a sender squashing full to limited](screenshots/levels-check.png)
+
+| What you see | What it means | What to change |
+|---|---|---|
+| Every square in both rows, black is black, white is white | Full range end to end (or limited at both ends, which works too) | Nothing |
+| The squares below 16 and above 235 have gone | **Crushed.** The receiving end expects limited and is stretching 16–235 out to 0–255, so everything beyond clips | Set the receiver's input to full, or the sender's output to limited |
+| Every square is there, but black is grey and white is dull | **Washed out.** The sending end is squashing to limited, and nothing stretches it back | Set the sender's output to full, or the receiver's input to limited |
+
+Crushed shows itself: squares vanish. Washed out doesn't, because nothing is lost, so judge the
+black against the screen switched off, or against a dark bit of set.
+
+What one picture can't tell you is which box in a longer chain did it. Look at the card on any
+monitor partway along: a media server's own preview, a processor's monitor out, a scaler's
+loop-through. The fault is between the last place it looks right and the first place it looks
+wrong. **Explain the results on the card** prints the table above on the pattern itself, for the
+person at the other end of the radio.
 
 ### Scale and novelty
 

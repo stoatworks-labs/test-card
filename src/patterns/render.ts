@@ -34,6 +34,7 @@ import { drawBananas, drawDinosaurs, drawHamsters, drawRulers } from './novelty'
 import { drawDinoScroll, drawOcean, drawVolcano } from './scenes'
 import { drawHauntedHouse, drawPumpkins, drawSpookyForest } from './halloween'
 import { drawClassicCard } from './classic'
+import { drawLevelsCheck } from './levels'
 import { drawBrokenWall } from './broken'
 import { drawImagePattern } from './image'
 import { loopTiming } from './loop'
@@ -143,6 +144,9 @@ export function paintPattern(
       break
     case 'classic-card':
       drawClassicCard(ctx, w, h, settings.classic, settings.centre, env, output)
+      break
+    case 'levels-check':
+      drawLevelsCheck(ctx, w, h, settings.levelsCheck)
       break
     case 'broken-wall': {
       const base: PatternSettings = { ...settings, kind: settings.broken.base }
@@ -429,6 +433,7 @@ export const PATTERN_LABELS: Record<PatternSettings['kind'], string> = {
   'spooky-forest': 'Spooky forest',
   'haunted-house': 'Haunted house',
   'classic-card': 'Classic test card',
+  'levels-check': 'Levels check',
 }
 
 /**

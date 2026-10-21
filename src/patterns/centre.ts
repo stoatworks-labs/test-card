@@ -32,16 +32,23 @@ export function centreLines(text: string): string[] {
 }
 
 /**
- * The largest font size, in pixels, that fits `lines` into a box: as tall as
- * the box allows, then shrunk until the widest line fits. `measure` gives a
+ * The largest whole font size, in pixels, that fits `lines` into a box: as tall
+ * as the box allows, then shrunk until the widest line fits. `measure` gives a
  * line's width at a size, so this stays testable without a canvas.
+ *
+ * Text doesn't scale in proportion: macOS's system font changes its spacing
+ * between sizes, and measured 26 px wider than 26.4 px. So the first guess is
+ * scaled, and then checked and stepped down at the size actually used.
  */
 export function fitTextSize(lines: string[], boxW: number, boxH: number, measure: (line: string, size: number) => number): number {
   if (!lines.length || boxW <= 0 || boxH <= 0) return 0
+  const widest = (size: number) => Math.max(...lines.map((line) => measure(line, size)))
   let size = boxH / lines.length / 1.2
-  const widest = Math.max(...lines.map((line) => measure(line, size)))
-  if (widest > boxW) size *= boxW / widest
-  return Math.max(1, Math.floor(size))
+  const first = widest(size)
+  if (first > boxW) size *= boxW / first
+  size = Math.max(1, Math.floor(size))
+  for (let tries = 0; size > 1 && widest(size) > boxW && tries < 40; tries++) size = Math.max(1, Math.floor(size * 0.97))
+  return size
 }
 
 export function drawCentrepiece(ctx: Ctx, rect: Rect, opts: CentreOptions, env: PaintEnv) {

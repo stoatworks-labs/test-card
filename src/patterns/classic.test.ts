@@ -78,6 +78,13 @@ describe('the centrepiece text', () => {
     expect(centreLines('  STAGE LEFT \n\n\n DSL  ')).toEqual(['STAGE LEFT', 'DSL'])
   })
 
+  it('checks the size it picks, for a font that is wider at some sizes than at bigger ones', () => {
+    // Like macOS's system font: 26 px measured wider than 26.4 px.
+    const lumpy = (line: string, size: number) => line.length * size * (Number.isInteger(size) ? 0.7 : 0.6)
+    const size = fitTextSize(['A LONG LINE OF TEXT'], 300, 200, lumpy)
+    expect(lumpy('A LONG LINE OF TEXT', size)).toBeLessThanOrEqual(300)
+  })
+
   it('fills the height when the text is short, and shrinks to the width when it is long', () => {
     expect(fitTextSize(['HI'], 1000, 120, measure)).toBe(100)
     const long = fitTextSize(['A VERY LONG LINE OF TEXT INDEED'], 300, 120, measure)

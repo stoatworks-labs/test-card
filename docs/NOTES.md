@@ -264,3 +264,24 @@ Run in Chrome 152: 1920 x 1080, 3840 x 2160, 1080 x 1920, 3840 x 1080,
 1280 x 1024, 640 x 360 and 64 x 36, with the logo, text, an image and no image.
 14 ms to render at 1080p. Not run: a real display or projector.
 
+## 2026-10-21 — levels check
+
+Allan asked for "a pattern to easily identify a mismatch in levels (limited vs
+full range), and ideally, at which end of the chain the mismatch is taking
+place". Near-black (2–32) and near-white (223–253) ladders on 0 and 255, 16
+and 235 picked out, always full range.
+
+- The direction is readable: a receiver stretching limited to full (crushed)
+  makes squares vanish; a sender squashing full to limited (washed out) keeps
+  them all and greys the black. Simulated on the rendered pixels with both
+  transfer functions to check that's what each looks like.
+- The box isn't: one picture can't say which device in a longer chain did it,
+  so the card says to look at a monitor partway along. Said so to Allan up front.
+- The notes overran the width at 1080p. `fitTextSize` scaled one measurement
+  linearly, and macOS's system font isn't linear in size (26 px measured wider
+  than 26.4 px; SF changes its spacing between sizes). It now re-measures at the
+  size it picks and steps down; the classic card's labels use it too.
+
+Not run: a real chain with each mismatch. That's the obvious next check, with a
+GPU set to limited RGB into a monitor set to full and the other way round.
+
