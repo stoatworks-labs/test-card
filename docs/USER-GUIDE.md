@@ -45,9 +45,9 @@ nothing is uploaded.
 | **Solid field** | Flat colour at a chosen level, for dead pixels and uniformity. |
 | **Greyscale** | Continuous ramp or stepped wedge, optionally split into R, G, B and neutral. |
 | **Pixel check** | 1px checkerboard and line bursts. **If it renders as flat grey on the real output, something in the chain is scaling.** |
-| **AV sync** | A flash and a beep on the same frame, and a scale that reads the offset in frames. See below. |
-| **Levels check** | Full or limited range, and which end has it wrong. See below. |
 | **Classic test card** | A grey grid, castellated edges and a big circle holding colour bars, gratings from 8 px down to 1 px, a picture panel, six greyscale steps and the output's name. See below. |
+| **Levels check** | Full or limited range, and which end has it wrong. See below. |
+| **AV sync** | A flash and a beep on the same frame, and a scale that reads the offset in frames. See below. |
 
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
 draw the imported slice or port outlines on top.
@@ -78,29 +78,6 @@ the panel. Set the panel's **Background**, and the text's colour.
 The card is always drawn in full range, whatever the level setting says. For checking levels, use
 the bars, the greyscale, or the **levels check**.
 
-### AV sync
-
-Every so often (once a second unless you change **Flash and beep every**) the pattern has a sync
-frame: the side panels flash white, the hand going round the ring reaches the top, and the sound
-starts a 1 kHz beep at −18 dBFS that lasts that one frame. Under the ring, boxes numbered −6 to +6
-light one per frame either side of it, 0 on the sync frame itself.
-
-To measure something: play the MP4 through it and film the screen with sound (a phone will do),
-or record its output on anything that takes picture and sound together. Find where a beep starts
-in the sound, step to that frame, and read the lit box. **+2** means the sound arrives two frames
-after the picture; **−1**, one frame before it.
-
-- The sound is in the **MP4** only. The preview is silent and a PNG is just a picture.
-- Make the MP4 at the frame rate the system runs at, so a frame in the file is a frame on the
-  screen.
-- The middle of the ring takes the same **In the middle** settings as the classic card: the logo,
-  your image, or your text.
-- The file's first and last half second are quiet, so the loop's seam never falls in a beep.
-
-How close it is: decoded by ffmpeg and by AVFoundation (what Resolume uses on a Mac), each beep
-starts within a quarter of a millisecond of the start of its flash frame, at 25, 29.97 and 30 fps.
-A frame is 33 to 40 ms, so the file itself is never the thing that's out.
-
 ### The levels check
 
 Full or limited range is the setting everybody has an opinion about and nobody can see. A GPU,
@@ -129,6 +106,29 @@ loop-through. The fault is between the last place it looks right and the first p
 wrong. **Explain the results on the card** prints the table above on the pattern itself, for the
 person at the other end of the radio. On an output under about 800 pixels wide the notes would be
 too small to read, so they're left off and only the squares are drawn.
+
+### AV sync
+
+Every so often (once a second unless you change **Flash and beep every**) the pattern has a sync
+frame: the side panels flash white, the hand going round the ring reaches the top, and the sound
+starts a 1 kHz beep at −18 dBFS that lasts that one frame. Under the ring, boxes numbered −6 to +6
+light one per frame either side of it, 0 on the sync frame itself.
+
+To measure something: play the MP4 through it and film the screen with sound (a phone will do),
+or record its output on anything that takes picture and sound together. Find where a beep starts
+in the sound, step to that frame, and read the lit box. **+2** means the sound arrives two frames
+after the picture; **−1**, one frame before it.
+
+- The sound is in the **MP4** only. The preview is silent and a PNG is just a picture.
+- Make the MP4 at the frame rate the system runs at, so a frame in the file is a frame on the
+  screen.
+- The middle of the ring takes the same **In the middle** settings as the classic card: the logo,
+  your image, or your text.
+- The file's first and last half second are quiet, so the loop's seam never falls in a beep.
+
+How close it is: decoded by ffmpeg and by AVFoundation (what Resolume uses on a Mac), each beep
+starts within a quarter of a millisecond of the start of its flash frame, at 25, 29.97 and 30 fps.
+A frame is 33 to 40 ms, so the file itself is never the thing that's out.
 
 ### Scale and novelty
 

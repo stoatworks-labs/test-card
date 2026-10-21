@@ -41,9 +41,9 @@ don't fit, a hamster on every LED tile, and a few moving scenes that export as s
 | **Solid field** | Flat colour at a chosen level, for dead pixels and uniformity |
 | **Greyscale** | Continuous ramp or stepped wedge, optionally split into R, G, B and neutral |
 | **Pixel check** | 1px checkerboard and line bursts. If it renders as flat grey on the real output, something in the chain is scaling |
-| **AV sync** | A flash and a one-frame 1 kHz beep on the same frame once a second, with a row of boxes numbered −6 to +6 lighting one per frame around it. Film it with sound, find where the beep starts, and the lit box says how many frames late or early the sound is. The MP4 has the sound in it; the beeps land within a quarter of a millisecond of their flashes |
-| **Levels check** | Is it full range end to end, and if not, which end has it wrong? Near-black and near-white squares either side of 16 and 235: squares vanishing (16 and 235 included) means something, usually the receiving end, is stretching; grey blacks with every square still there means the sending end is squashing. The card prints the verdicts on itself |
 | **Classic test card** | A grey grid with castellated edges and a big circle, in the old broadcast tradition: colour bars, gratings from 8 px lines down to 1 px, six greyscale steps, corner circles and pixel checkers, and the output's name at the foot. Where the famous cards had a photograph, this has the Stoatworks logo, your own picture or your own words |
+| **Levels check** | Is it full range end to end, and if not, which end has it wrong? Near-black and near-white squares either side of 16 and 235: squares vanishing (16 and 235 included) means something, usually the receiving end, is stretching; grey blacks with every square still there means the sending end is squashing. The card prints the verdicts on itself |
+| **AV sync** | A flash and a one-frame 1 kHz beep on the same frame once a second, with a row of boxes numbered −6 to +6 lighting one per frame around it. Film it with sound, find where the beep starts, and the lit box says how many frames late or early the sound is. The MP4 has the sound in it; the beeps land within a quarter of a millisecond of their flashes |
 
 ### Scale and novelty
 
