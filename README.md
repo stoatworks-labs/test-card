@@ -60,6 +60,20 @@ don't fit, a hamster on every LED tile, and a few moving scenes that export as s
 | **Broken wall** | Any other pattern with a share of its tiles broken: dead tiles and modules, calibration and batch mismatches, a lost colour, the wrong RGB order, scan faults, dead pixels, mapping errors, an upside-down module, seams, a frozen tile, flicker and data noise. Optionally labelled, for training |
 | **Your image** | Any picture, fitted, filled and cropped, stretched, 1:1, or tiled, anchored where you like. Kept in your browser across a refresh and never uploaded |
 
+### Halloween
+
+For the one week a year the LED wall is expected to be festive.
+
+![The haunted house on its hill with zombies and skeletons walking the graveyard and vampires flying past the moon; the spooky forest with a witch crossing the moon; and a jack-o'-lantern on every LED tile](docs/screenshots/halloween.jpg)
+
+<sub>Stills from the three loops at 1920 × 1080. The pumpkins are on 270 px tiles here so you can see their faces.</sub>
+
+| Pattern | What it is for |
+|---|---|
+| **Pumpkin patch** | A jack-o'-lantern on every LED tile, each carved with one of six faces, with flickering candles and the odd blink, wink or chomp. Pick which faces; untick them all and you get plain pumpkins. Moves |
+| **Spooky forest** | A night wood scrolling past in five layers of parallax: a full moon, mist, dead trees with eyes in them, witches on broomsticks and bats. Moves |
+| **Haunted house** | A house on a hill with lights in most of its windows and something in one of the others, zombies and skeletons walking the graveyard in front, and vampires flying round the back. Moves |
+
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
 draw the imported slice or port outlines on top.
 
@@ -81,8 +95,8 @@ because nothing can be life-size both ways at once on a stretched picture; it ge
 
 ## Moving patterns and MP4 loops
 
-The ocean, the scroll, the volcano and the hamsters move, and so does a broken wall over any of
-them (or with flicker or data noise in it). They animate in the preview and export as **H.264 MP4
+The ocean, the scroll, the volcano, the hamsters and the three Halloween patterns move, and so
+does a broken wall over any of them (or with flicker or data noise in it). They animate in the preview and export as **H.264 MP4
 loops**, encoded in the browser, one per output or one for the composition. A PNG of any frame is
 still there.
 
@@ -210,6 +224,11 @@ for the invariants and the traps.
   broken-wall loops are pixel-identical at t = 0 and t = T before encoding, and after it the step
   from the last frame back to the first is within about a tenth of a grey level of the step into
   any other keyframe of the same loop.
+- **Halloween loops:** the pumpkin, forest and house loops are pixel-identical at t = 0 and t = T
+  at 25, 29.97 and 30 fps, for 7 s and 10 s loops. Each exported at 3840 × 2160 through the app
+  came out as 300 frames, 10.000 s, H.264 High, BT.709 limited, and the step from the last frame
+  back to the first is inside the range of every other step in the file. The tests hold the
+  walkers' feet on the ground through every stride and every face inside its pumpkin.
 - **In Resolume:** Arena 7.28.1 (macOS 26.4.1) opened ocean, scroll and hamster loops at
   1920 × 1080 and an ocean at 3840 × 2160, all at 30 fps and exactly 10 s. Its output snapshot of
   frame 0 matched a BT.709 limited-range decode with a mean error of 0.90 code values at 1080p and
@@ -219,7 +238,9 @@ for the invariants and the traps.
   encodes did the same at every keyframe interval tried, all-intra included, and a DXV encode froze
   in none of 3.
 - **Spanning:** the six-projector Blend Calc export rendered per output, with every surface pattern
-  matching in the edge-blend overlaps apart from at most nine antialiased edge pixels.
+  matching in the edge-blend overlaps apart from at most nine antialiased edge pixels. The forest
+  and the house came later: in their worst overlap at most four pixels are more than three code
+  values out, though up to a couple of hundred more are out by one to three.
 - **Reviewed:** an independent review of the whole change before it landed found twelve problems,
   from a volcano that grew a different forest on each output to an MP4 export that crawled in a
   background tab. All twelve were fixed and the checks above re-run afterwards.

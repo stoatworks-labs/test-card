@@ -174,3 +174,55 @@ manifest that could name files the ZIP had renamed; both fixed.
 
 Not run: tiles played together in Resolume or any media server, other
 browsers, a tiled broken wall at full length (it is slow by design).
+
+## 2026-10-21 — Halloween: pumpkin patch, spooky forest, haunted house
+
+Allan asked for a Halloween suite: a pumpkin per tile with a few different
+faces, a parallax forest with the night sky, witches on broomsticks and bats,
+and a haunted house with zombies and skeletons in front and flying vampires
+behind, "ideally with some basic animation". All three move.
+
+- **Pumpkin patch** (`pumpkins`): per LED tile like the hamsters. Six faces,
+  each with an expression (blink, wink, chomp, squint, gasp, slits); candles
+  flicker at about 1.3, 3.1 and 5.3 Hz in whole cycles. It is a still if both
+  movements are off or no face is ticked (plain pumpkins), so `isAnimated`
+  asks, for a broken wall over it too.
+- **Spooky forest** (`spooky-forest`): five parallax layers on
+  `layerWidths(scene.speed)`, shared with the dinosaur scroll. Mist is a ridge
+  whose period is a third of the world, drifting a whole number of its own
+  periods per loop, faded with a gradient. The near trees are 2–2.4 screen
+  heights tall so their crowns are out of shot; with crowns in shot they hid
+  the sky and the witches.
+- **Haunted house** (`haunted-house`): `scene.seed` only. Walkers go one lap of
+  `walkLap(world)` per loop. The ghost started in a lit window, where a pale
+  sheet on a yellow pane barely showed; it now haunts a dark one with a cold
+  light behind it.
+
+Art is polygons in `art/halloween.ts` as before. The walkers share one rig
+(`walkPose`) in body heights, y up, with the hip set so the lower foot is on the
+ground; the tests hold both to the ground and to one body height through a
+stride. Dead trees are cached as `Path2D` (see AGENTS.md).
+
+Run in Chrome 152 in the app's browser pane (pane hidden; frames posted to a
+local receiver rather than screenshotted, since a hidden pane's screenshots lag):
+
+- t = 0 and t = T pixel-identical for all three, at 25, 29.97 and 30 fps and
+  7 s and 10 s loops; the middle of the loop differs.
+- MP4s of all three at 3840 x 2160 through the real **Download MP4 loop**
+  button: 300 frames, 10.000 s, H.264 High, BT.709 limited, decoded by ffmpeg.
+  Wrap step against every other step (mean |diff| at 960 x 540): house 1.75 vs
+  median 1.55 / max 1.91, forest 2.98 vs 3.04 / 3.46, pumpkins 1.32 vs 1.21 /
+  1.39. The house took 42 s to export.
+- **Download PNG** gives a 3840 x 2160 still of each (Allan asked for stills of
+  the moving patterns; the button was already there).
+- Spanning, on the six-projector Blend Calc fixture: in the worst overlap at
+  most four pixels are more than three code values out for the forest and the
+  house, but up to 231 are out by one to three (the dinosaur scroll: 2, the
+  volcano: 21). It is not gradient dithering (a gradient drawn on two offset
+  canvases matches) and not the cached tree paths (they match too). Not chased
+  further: one to three code values in a blend overlap don't show.
+- Render time once the trees are cached: 4–15 ms a frame for the forest at
+  1080p, 60–100 ms for the house's first frame.
+
+Not run: Resolume, a real wall, other browsers, a tiled (8K) Halloween loop.
+

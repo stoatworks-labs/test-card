@@ -1,6 +1,7 @@
 import type { PatternSettings } from '../types'
 import { ALL_FAULTS } from '../patterns/broken'
 import { LINEUP_ORDER } from '../patterns/art/dinosaurs'
+import { PUMPKIN_FACES } from '../patterns/art/halloween'
 
 /**
  * Starting settings.
@@ -97,6 +98,8 @@ export const DEFAULT_SETTINGS: PatternSettings = {
   },
 
   hamsters: { bpm: 120 },
+
+  pumpkins: { seed: 1, faces: [...PUMPKIN_FACES], flicker: true, expressions: true },
 
   ocean: { seed: 1, time: 'sunset', swell: 1 },
 

@@ -68,8 +68,25 @@ explaining to someone what a dead module looks like.
 | **Broken wall** | Another pattern with a share of its tiles broken in fifteen different ways, from a dead tile to a wrong RGB order. Tick **Label each fault** to name them on the wall. |
 | **Your image** | Any picture, fitted, filled and cropped, stretched, 1:1 or tiled. It stays in this browser across a refresh and is never uploaded. |
 
-The per-tile patterns (bananas per tile, hamsters, the broken wall) use the same tiles as the
-**LED tiles** pattern: a uniform size you state, or the cabinets from a Pixel Peeker import.
+The per-tile patterns (bananas per tile, hamsters, pumpkins, the broken wall) use the same tiles as
+the **LED tiles** pattern: a uniform size you state, or the cabinets from a Pixel Peeker import.
+
+### Halloween
+
+Three more for the time of year when someone asks whether the wall can do "something spooky"
+between the bands.
+
+![The haunted house on its hill with zombies and skeletons walking the graveyard and vampires flying past the moon; the spooky forest with a witch crossing the moon; and a jack-o'-lantern on every LED tile](screenshots/halloween.jpg)
+
+| Pattern | What it is for |
+|---|---|
+| **Pumpkin patch** | A jack-o'-lantern on every LED tile, each carved with one of six faces: classic, fierce, happy, surprised, sly (with fangs) and goofy. Tick the faces you want; **Seed** deals them out. **Candles flicker** and **Blinks, winks and chomps** are the two things that move; untick both and it's a still. Untick every face and the pumpkins are plain. |
+| **Spooky forest** | A night wood scrolling past in five layers of parallax: far hills, mist, three depths of dead trees (the middle one has eyes in it), lanterns on the ground, and witches and bats crossing the moon. **Seed** and **Speed** are shared with the dinosaur scroll. Moves. |
+| **Haunted house** | A house on a hill with candles in its windows, a ghost in one of the dark ones once a loop, bats round the spire, vampires flying round the back, and zombies and skeletons walking the graveyard in opposite directions. **Seed** rearranges it. Moves. |
+
+Like the other scenes, the forest and the house carry on across outputs when **Carry on across
+outputs** is ticked. The zombies and skeletons go round once per loop, so a longer loop makes them
+walk slower; at 10 s they're a bit brisk for the undead.
 
 ---
 
@@ -100,6 +117,9 @@ the composition isn't spanned and gets its own copy instead.
 
 The moving patterns animate in the preview (**Pause** freezes it on the frame the PNG will use) and
 get a **Download MP4 loop** button. Set the length and frame rate under **Loop**.
+
+**Download PNG** is still there for every one of them: it gives you a single still per output, the
+frame at **PNG shows the frame at (s)**. Pause the preview to see which frame that is.
 
 - The loop goes round with no seam: everything in it does a whole number of cycles in the loop's
   exact length, which is a whole number of frames.

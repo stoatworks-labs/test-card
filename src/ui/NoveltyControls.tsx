@@ -5,11 +5,12 @@
  */
 
 import { useRef, useState } from 'react'
-import type { BrokenFault, DinosaurId, PatternKind, PatternSettings } from '../types'
+import type { BrokenFault, DinosaurId, PatternKind, PatternSettings, PumpkinFace } from '../types'
 import { Check, Colour, Field, Num } from './PatternPanel'
 import { PATTERN_LABELS, setPatternImage } from '../patterns/render'
 import { ALL_FAULTS, FAULT_LABELS } from '../patterns/broken'
 import { LINEUP_ORDER, SPECIES } from '../patterns/art/dinosaurs'
+import { PUMPKIN_FACE_LABELS, PUMPKIN_FACES } from '../patterns/art/halloween'
 import { lineup, panToCentre } from '../patterns/novelty'
 import { loopTiming } from '../patterns/loop'
 import { clearImage, decodeImage, saveImage } from '../state/image-store'
@@ -313,7 +314,7 @@ export function SceneControls({
     <>
       <h3>{PATTERN_LABELS[kind]}</h3>
       <Seed value={opts.seed} onChange={(seed) => patch({ seed })} />
-      {kind === 'dino-scroll' ? (
+      {kind === 'dino-scroll' || kind === 'spooky-forest' ? (
         <Num
           label="Speed (screen widths per loop, nearest ground)"
           value={opts.speed}
@@ -326,10 +327,36 @@ export function SceneControls({
   )
 }
 
+export function PumpkinControls({ opts, patch }: { opts: PatternSettings['pumpkins']; patch: Patch }) {
+  const toggle = (f: PumpkinFace, on: boolean) =>
+    patch({ faces: PUMPKIN_FACES.filter((x) => (x === f ? on : opts.faces.includes(x))) })
+  return (
+    <>
+      <h3>Pumpkin patch</h3>
+      <Seed value={opts.seed} onChange={(seed) => patch({ seed })} />
+      <div className="checks two">
+        {PUMPKIN_FACES.map((f) => (
+          <Check key={f} label={PUMPKIN_FACE_LABELS[f]} checked={opts.faces.includes(f)} onChange={(on) => toggle(f, on)} />
+        ))}
+      </div>
+      <Check label="Candles flicker" checked={opts.flicker} onChange={(flicker) => patch({ flicker })} />
+      <Check label="Blinks, winks and chomps" checked={opts.expressions} onChange={(expressions) => patch({ expressions })} />
+      <p className="hint">
+        {opts.faces.length
+          ? 'One pumpkin per LED tile, each with a face picked from the ones ticked. The seed deals them out.'
+          : 'No faces ticked, so the pumpkins are plain and uncarved, and nothing moves.'}
+      </p>
+    </>
+  )
+}
+
 const BASES: Exclude<PatternKind, 'broken-wall'>[] = [
   'ocean',
   'dino-scroll',
   'volcano',
+  'spooky-forest',
+  'haunted-house',
+  'pumpkins',
   'image',
   'smpte-rp219',
   'ebu-bars',

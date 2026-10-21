@@ -71,14 +71,30 @@ export function plainEnv(w: number, h: number, patch: Partial<PaintEnv> = {}): P
   }
 }
 
-const MOVING: ReadonlySet<PatternSettings['kind']> = new Set(['hamsters', 'ocean', 'dino-scroll', 'volcano'])
+const MOVING: ReadonlySet<PatternSettings['kind']> = new Set([
+  'hamsters',
+  'ocean',
+  'dino-scroll',
+  'volcano',
+  'spooky-forest',
+  'haunted-house',
+])
+
+/** Whether a kind of pattern moves with these settings. Pumpkins only do if they have candles or faces to pull. */
+function moves(kind: PatternSettings['kind'], settings: PatternSettings): boolean {
+  if (kind === 'pumpkins') {
+    const p = settings.pumpkins
+    return p.faces.length > 0 && (p.flicker || p.expressions)
+  }
+  return MOVING.has(kind)
+}
 
 /** Whether a pattern changes over time, and so can be exported as a loop. */
 export function isAnimated(settings: PatternSettings): boolean {
-  if (MOVING.has(settings.kind)) return true
+  if (moves(settings.kind, settings)) return true
   if (settings.kind === 'broken-wall') {
     return (
-      MOVING.has(settings.broken.base) ||
+      moves(settings.broken.base, settings) ||
       settings.broken.faults.includes('flicker') ||
       settings.broken.faults.includes('noise')
     )

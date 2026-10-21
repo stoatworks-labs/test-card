@@ -25,8 +25,20 @@ function output(patch: Partial<Output> = {}): Output {
 
 describe('which patterns do what', () => {
   it('knows the moving ones', () => {
-    for (const kind of ['hamsters', 'ocean', 'dino-scroll', 'volcano'] as const) expect(isAnimated(with_({ kind }))).toBe(true)
+    for (const kind of ['hamsters', 'ocean', 'dino-scroll', 'volcano', 'pumpkins', 'spooky-forest', 'haunted-house'] as const) {
+      expect(isAnimated(with_({ kind }))).toBe(true)
+    }
     for (const kind of ['smpte-rp219', 'rulers', 'bananas', 'dinosaurs', 'image'] as const) expect(isAnimated(with_({ kind }))).toBe(false)
+  })
+
+  it('a pumpkin patch moves only if it has candles to flicker or faces to pull', () => {
+    const p = S.pumpkins
+    expect(isAnimated(with_({ kind: 'pumpkins', pumpkins: { ...p, flicker: false } }))).toBe(true)
+    expect(isAnimated(with_({ kind: 'pumpkins', pumpkins: { ...p, flicker: false, expressions: false } }))).toBe(false)
+    expect(isAnimated(with_({ kind: 'pumpkins', pumpkins: { ...p, faces: [] } }))).toBe(false)
+    const still = { ...S.broken, base: 'pumpkins' as const, faults: ['dead-tile' as const] }
+    expect(isAnimated(with_({ kind: 'broken-wall', broken: still }))).toBe(true)
+    expect(isAnimated(with_({ kind: 'broken-wall', broken: still, pumpkins: { ...p, faces: [] } }))).toBe(false)
   })
 
   it('a broken wall moves if its picture does, or if it flickers', () => {
@@ -123,10 +135,11 @@ describe('absurd tile sizes', () => {
 describe('saved state from before these patterns', () => {
   it('gains every new option instead of rendering with it undefined', () => {
     const old = { ...S } as Record<string, unknown>
-    for (const k of ['scale', 'animation', 'rulers', 'bananas', 'dinosaurs', 'hamsters', 'ocean', 'scene', 'broken', 'image']) delete old[k]
+    for (const k of ['scale', 'animation', 'rulers', 'bananas', 'dinosaurs', 'hamsters', 'pumpkins', 'ocean', 'scene', 'broken', 'image']) delete old[k]
     const merged = _internals.merge(S, old as Partial<PatternSettings>)
     expect(merged.dinosaurs.species).toEqual(S.dinosaurs.species)
     expect(merged.broken.faults).toEqual(S.broken.faults)
     expect(merged.animation.fps).toBe('30')
+    expect(merged.pumpkins.faces).toEqual(S.pumpkins.faces)
   })
 })

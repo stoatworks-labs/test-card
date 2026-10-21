@@ -45,6 +45,9 @@ export const PATTERN_SLUGS: Record<PatternSettings['kind'], string> = {
   volcano: 'volcano',
   'broken-wall': 'broken',
   image: 'image',
+  pumpkins: 'pumpkins',
+  'spooky-forest': 'spookyforest',
+  'haunted-house': 'hauntedhouse',
 }
 
 /** PNG for a still, MP4 for a loop. The loop's name says its frame rate and length too. */

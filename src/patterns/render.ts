@@ -32,6 +32,7 @@ import {
 import { isAnimated, plainEnv, type PaintEnv, type PatternImage } from './env'
 import { drawBananas, drawDinosaurs, drawHamsters, drawRulers } from './novelty'
 import { drawDinoScroll, drawOcean, drawVolcano } from './scenes'
+import { drawHauntedHouse, drawPumpkins, drawSpookyForest } from './halloween'
 import { drawBrokenWall } from './broken'
 import { drawImagePattern } from './image'
 import { loopTiming } from './loop'
@@ -130,6 +131,15 @@ export function paintPattern(
     case 'image':
       drawImagePattern(ctx, w, h, settings.image, env)
       break
+    case 'pumpkins':
+      drawPumpkins(ctx, w, h, settings.pumpkins, env)
+      break
+    case 'spooky-forest':
+      drawSpookyForest(ctx, w, h, settings.scene, env)
+      break
+    case 'haunted-house':
+      drawHauntedHouse(ctx, w, h, settings.scene, env)
+      break
     case 'broken-wall': {
       const base: PatternSettings = { ...settings, kind: settings.broken.base }
       drawBrokenWall(
@@ -165,6 +175,9 @@ const SURFACE_KINDS: ReadonlySet<PatternKind> = new Set<PatternKind>([
   'dino-scroll',
   'volcano',
   'image',
+  'pumpkins',
+  'spooky-forest',
+  'haunted-house',
 ])
 
 export function spansSurface(settings: PatternSettings): boolean {
@@ -205,6 +218,7 @@ function outputKey(output: Output | undefined): number {
 function needsTiles(settings: PatternSettings): boolean {
   return (
     settings.kind === 'hamsters' ||
+    settings.kind === 'pumpkins' ||
     settings.kind === 'broken-wall' ||
     (settings.kind === 'bananas' && settings.bananas.layout === 'per-tile')
   )
@@ -407,6 +421,9 @@ export const PATTERN_LABELS: Record<PatternSettings['kind'], string> = {
   volcano: 'Volcano and comet',
   'broken-wall': 'Broken wall',
   image: 'Your image',
+  pumpkins: 'Pumpkin patch',
+  'spooky-forest': 'Spooky forest',
+  'haunted-house': 'Haunted house',
 }
 
 /**

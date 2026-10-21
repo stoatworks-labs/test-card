@@ -273,7 +273,7 @@ export function layerOffset(widthsPerLoop: number, period: number, t: number, lo
 }
 
 /** Draw a periodic thing at every repeat that could be on screen. */
-function eachRepeat(x: number, period: number, x0: number, x1: number, draw: (x: number) => void) {
+export function eachRepeat(x: number, period: number, x0: number, x1: number, draw: (x: number) => void) {
   const first = x - Math.ceil((x - x0) / period) * period
   for (let p = first; p <= x1; p += period) draw(p)
 }

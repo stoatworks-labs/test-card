@@ -211,7 +211,8 @@ export function pathLength(pts: Pt[]): number {
 // The painter. The only function in the art modules that touches a canvas.
 // ---------------------------------------------------------------------------
 
-export function tracePath(ctx: CanvasRenderingContext2D, pts: Pt[], smooth: boolean, closed: boolean) {
+/** Trace a polygon into a context or a `Path2D` — anything with the path methods. */
+export function tracePath(ctx: CanvasPath, pts: Pt[], smooth: boolean, closed: boolean) {
   if (pts.length < 2) return
   if (!smooth || pts.length < 3) {
     ctx.moveTo(pts[0]![0], pts[0]![1])

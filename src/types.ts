@@ -133,6 +133,10 @@ export type PatternKind =
   | 'volcano'
   | 'broken-wall'
   | 'image'
+  // Halloween, all of them moving.
+  | 'pumpkins'
+  | 'spooky-forest'
+  | 'haunted-house'
 
 /**
  * Output level range.
@@ -351,6 +355,19 @@ export type SceneOptions = {
   speed: number
 }
 
+export type PumpkinFace = 'classic' | 'fierce' | 'happy' | 'surprised' | 'sly' | 'goofy'
+
+export type PumpkinOptions = {
+  /** Which face goes on which tile. */
+  seed: number
+  /** The faces to carve. None at all gives plain, uncarved pumpkins. */
+  faces: PumpkinFace[]
+  /** Candles that flicker, rather than burn steady. */
+  flicker: boolean
+  /** Blinks, winks and chattering teeth, each pumpkin in its own time. */
+  expressions: boolean
+}
+
 export type BrokenFault =
   | 'dead-tile'
   | 'dead-module'
@@ -436,6 +453,7 @@ export type PatternSettings = {
   bananas: BananaOptions
   dinosaurs: DinosaurOptions
   hamsters: HamsterOptions
+  pumpkins: PumpkinOptions
   ocean: OceanOptions
   scene: SceneOptions
   broken: BrokenWallOptions

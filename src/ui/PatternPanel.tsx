@@ -10,6 +10,7 @@ import {
   ImageControls,
   LoopControls,
   OceanControls,
+  PumpkinControls,
   RulerControls,
   ScaleControls,
   SceneControls,
@@ -28,6 +29,12 @@ const NOVELTY: { kind: PatternKind; hint: string }[] = [
   { kind: 'volcano', hint: 'Eruption, comet, silhouettes' },
   { kind: 'broken-wall', hint: 'Dead modules, bad calibration…' },
   { kind: 'image', hint: 'Your picture, fitted or cropped' },
+]
+
+const HALLOWEEN: { kind: PatternKind; hint: string }[] = [
+  { kind: 'pumpkins', hint: "A jack-o'-lantern on every LED tile" },
+  { kind: 'spooky-forest', hint: 'Parallax night wood, witches and bats' },
+  { kind: 'haunted-house', hint: 'Zombies, skeletons, flying vampires' },
 ]
 
 const KINDS: { kind: PatternKind; hint: string }[] = [
@@ -63,7 +70,10 @@ export function PatternPanel({
   const sub = (key: keyof PatternSettings): Patch => (p) => patch({ [key]: p })
   const kind = settings.kind
   const perTile =
-    kind === 'hamsters' || kind === 'broken-wall' || (kind === 'bananas' && settings.bananas.layout === 'per-tile')
+    kind === 'hamsters' ||
+    kind === 'pumpkins' ||
+    kind === 'broken-wall' ||
+    (kind === 'bananas' && settings.bananas.layout === 'per-tile')
   const surface = spansSurface({ ...settings, scale: { ...settings.scale, span: true } })
 
   const grid = (items: typeof KINDS) => (
@@ -89,6 +99,8 @@ export function PatternPanel({
       {grid(KINDS)}
       <h3 className="kind-group">Scale and novelty</h3>
       {grid(NOVELTY)}
+      <h3 className="kind-group">Halloween</h3>
+      {grid(HALLOWEEN)}
 
       {kind === 'rulers' ? <RulerControls opts={settings.rulers} patch={sub('rulers')} /> : null}
       {kind === 'bananas' ? <BananaControls opts={settings.bananas} patch={sub('bananas')} /> : null}
@@ -97,7 +109,8 @@ export function PatternPanel({
       ) : null}
       {kind === 'hamsters' ? <HamsterControls opts={settings.hamsters} patch={sub('hamsters')} /> : null}
       {kind === 'ocean' ? <OceanControls opts={settings.ocean} patch={sub('ocean')} /> : null}
-      {kind === 'dino-scroll' || kind === 'volcano' ? (
+      {kind === 'pumpkins' ? <PumpkinControls opts={settings.pumpkins} patch={sub('pumpkins')} /> : null}
+      {kind === 'dino-scroll' || kind === 'volcano' || kind === 'spooky-forest' || kind === 'haunted-house' ? (
         <SceneControls kind={kind} opts={settings.scene} patch={sub('scene')} />
       ) : null}
       {kind === 'broken-wall' ? <BrokenControls opts={settings.broken} patch={sub('broken')} /> : null}

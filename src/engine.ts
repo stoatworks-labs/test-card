@@ -23,6 +23,7 @@ export type {
   LevelRange,
   BrokenFault,
   DinosaurId,
+  PumpkinFace,
   RenderMode,
 } from './types'
 
@@ -44,3 +45,4 @@ export {
 export { isAnimated, isScaleAware } from './patterns/env'
 export { FAULT_LABELS, ALL_FAULTS } from './patterns/broken'
 export { LINEUP_ORDER, SPECIES } from './patterns/art/dinosaurs'
+export { PUMPKIN_FACES, PUMPKIN_FACE_LABELS } from './patterns/art/halloween'

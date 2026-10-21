@@ -36,12 +36,15 @@ src/patterns/loop.ts  loop timing in whole frames, whole cycles per loop (pure)
 src/patterns/random.ts seeded randomness; the only randomness patterns may use
 src/patterns/novelty.ts rulers, bananas, life-size dinosaurs, hamsters
 src/patterns/scenes.ts ocean, dinosaur scroll, volcano — the moving scenes
+src/patterns/halloween.ts pumpkin patch, spooky forest, haunted house, and their pure
+                      timing (candle flicker, blinks, walkers' laps)
 src/patterns/broken.ts the broken wall: fault choice and pixel ops (pure) + painter
 src/patterns/image.ts your image, fitted (pure placement) + painter
 src/engine.ts         the embeddable entry: settings, painters, limits, no React —
                       LivePremier Plus bundles it (see "Embedded elsewhere")
 src/patterns/art/*.ts the artwork, as polygons: shapes, bananas, dinosaurs,
-                      hamster sprites, scenery. Only shapes.fillShapes touches a canvas
+                      hamster sprites, scenery, halloween. Only shapes.fillShapes (and
+                      tracePath, into a canvas or a Path2D) touches a canvas
 src/lib/mp4.ts        hand-rolled MP4 writer, one H.264 track
 src/lib/video.ts      WebCodecs encode loop, the RGB -> Y′CbCr 4:2:0 conversion, and the
                       tile planner for rasters the encoder won't take whole
@@ -222,6 +225,17 @@ export adds up every loop going in one ZIP (tiles made 8K outputs possible, and
 three of them at 1 GB each would otherwise be built and then die): the finished
 files are all held until the ZIP is built.
 
+**Dead trees are cached as `Path2D`s.** A Halloween dead tree is a few hundred polygons and
+never changes, so `drawTree` builds it once at its own origin, keyed by seed, size (to a quarter
+pixel) and forking depth, and fills it in one go. Every polygon is wound the same way first
+(`wound`), because one nonzero fill of overlapping subpaths wound opposite ways punches holes
+where they cross. Anything that changes a tree's shape must be in the key.
+
+**The dead walk one lap per loop, and a lap is not the world.** `walkLap` is the world's width on
+an ordinary output but a whole fraction of it on a wide span, or a six-projector surface would have
+the zombies sprinting. Strides are fitted to the lap like the dinosaurs' are, and a zombie's lurch
+is periodic in its stride, so it still does exactly one lap.
+
 **Vite caches a dynamically imported module across edits.** Driving the encoder
 from the browser console with `await import('/src/lib/video.ts')` keeps handing
 back the version from before your last edit until the page is reloaded. Two
@@ -241,7 +255,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 254 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 281 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with
