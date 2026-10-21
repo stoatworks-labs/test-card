@@ -1,5 +1,5 @@
 /**
- * A minimal MP4 writer: one H.264 video track, nothing else.
+ * A minimal MP4 writer: one H.264 video track, and optionally one AAC track.
  *
  * Hand-rolled for the same reasons as zip.ts — the job is small and well
  * specified, and a dependency would be bigger than the code. It writes exactly
@@ -23,7 +23,19 @@
  * the index without seeking to the end of the file. Every sample has the same
  * duration (one frame), every sample is its own chunk, and there are no
  * B-frames — the encoder is asked for none and `encodeLoop` refuses a stream
- * that has them — so no composition offsets (ctts) or edit list are needed.
+ * that has them — so the video needs no composition offsets (ctts) or edit list.
+ *
+ * SOUND
+ * =====
+ * The AAC track (trak/mdia/minf with smhd, and stsd/mp4a/esds) has the one thing
+ * the video doesn't: an edit list. An AAC encoder starts with some samples of
+ * priming, and `edts/elst` tells the player to start that many samples in and
+ * play the loop's length from there. Without it the sound runs late by the
+ * priming (2112 samples, 44 ms, from Chrome on a Mac), which on an AV sync loop
+ * is the very thing being measured. AVFoundation also wants the `roll` sample
+ * group Apple's encoder writes, or it trims the priming a second time and the
+ * sound runs early by the same amount (measured, 2026-10-21). Samples of both tracks go into mdat in time
+ * order, so a player reads them together.
  *
  * COLOUR
  * ======
@@ -54,6 +66,22 @@ export type Mp4Options = {
   avcC: Uint8Array
   colour?: { primaries: number; transfer: number; matrix: number; fullRange: boolean }
 }
+
+export type Mp4Audio = {
+  /** AAC access units, 1024 samples each. */
+  frames: Uint8Array[]
+  /** AudioSpecificConfig. */
+  asc: Uint8Array
+  sampleRate: number
+  channels: number
+  bitrate: number
+  /** Samples to skip at the start (the encoder's priming), by edit list. */
+  delay: number
+  /** Samples to play after them: the loop's length. */
+  length: number
+}
+
+const AAC_FRAME = 1024
 
 const enc = new TextEncoder()
 
@@ -113,11 +141,95 @@ function matrix(): Uint8Array {
   return b.done()
 }
 
-function buildMoov(samples: Mp4Sample[], opts: Mp4Options, offsets: number[]): Uint8Array {
+/** An MPEG-4 descriptor: tag, length (one byte will do for these), payload. */
+function descriptor(tag: number, ...payload: Uint8Array[]): Uint8Array {
+  const length = payload.reduce((n, p) => n + p.length, 0)
+  if (length > 127) throw new Error('An MPEG-4 descriptor that long needs a longer length field.')
+  const b = new Buf().u8(tag).u8(length)
+  for (const p of payload) b.bytes(p)
+  return b.done()
+}
+
+function audioTrak(audio: Mp4Audio, offsets: number[], movieTimescale: number): Uint8Array {
+  const n = audio.frames.length
+  const playDuration = Math.round((audio.length / audio.sampleRate) * movieTimescale)
+  const tkhd = fullBox(
+    'tkhd',
+    0,
+    0x000003,
+    new Buf()
+      .u32(0)
+      .u32(0)
+      .u32(2)
+      .u32(0)
+      .u32(playDuration)
+      .zeros(8)
+      .u16(0)
+      .u16(0)
+      .u16(0x0100) // full volume
+      .u16(0)
+      .bytes(matrix())
+      .u32(0)
+      .u32(0)
+      .done(),
+  )
+  // Skip the priming, then play the loop's length.
+  const elst = fullBox('elst', 0, 0, new Buf().u32(1).u32(playDuration).u32(audio.delay).u16(1).u16(0).done())
+  const mdhd = fullBox('mdhd', 0, 0, new Buf().u32(0).u32(0).u32(audio.sampleRate).u32(n * AAC_FRAME).u16(0x55c4).u16(0).done())
+  const hdlr = fullBox('hdlr', 0, 0, new Buf().u32(0).str('soun').zeros(12).str('SoundHandler').u8(0).done())
+  const decoderConfig = descriptor(
+    0x04,
+    new Buf()
+      .u8(0x40) // MPEG-4 audio
+      .u8(0x15) // audio stream
+      .u8(0)
+      .u16(0) // buffer size
+      .u32(audio.bitrate)
+      .u32(audio.bitrate)
+      .done(),
+    descriptor(0x05, audio.asc),
+  )
+  const es = descriptor(0x03, new Buf().u16(0).u8(0).done(), decoderConfig, descriptor(0x06, Uint8Array.of(0x02)))
+  const mp4a = box(
+    'mp4a',
+    new Buf()
+      .zeros(6)
+      .u16(1) // data_reference_index
+      .zeros(8)
+      .u16(audio.channels)
+      .u16(16)
+      .u16(0)
+      .u16(0)
+      .u32(audio.sampleRate * 0x10000)
+      .done(),
+    fullBox('esds', 0, 0, es),
+  )
+  const stsd = fullBox('stsd', 0, 0, new Buf().u32(1).done(), mp4a)
+  const stts = fullBox('stts', 0, 0, new Buf().u32(1).u32(n).u32(AAC_FRAME).done())
+  const stsc = fullBox('stsc', 0, 0, new Buf().u32(1).u32(1).u32(1).u32(1).done())
+  const stszBuf = new Buf().u32(0).u32(n)
+  for (const f of audio.frames) stszBuf.u32(f.length)
+  const stcoBuf = new Buf().u32(n)
+  for (const o of offsets) stcoBuf.u32(o)
+  // Every AAC frame needs the one before it to decode ("roll" -1), as Apple's own encoder marks it.
+  // Without this group AVFoundation (and so Resolume on a Mac) trims the priming itself AND obeys
+  // the edit list, and the sound plays 2112 samples early; ffmpeg reads it the same either way.
+  const sgpd = fullBox('sgpd', 1, 0, new Buf().str('roll').u32(2).u32(1).u16(0xffff).done())
+  const sbgp = fullBox('sbgp', 0, 0, new Buf().str('roll').u32(1).u32(n).u32(1).done())
+  const stbl = box('stbl', stsd, stts, stsc, fullBox('stsz', 0, 0, stszBuf.done()), fullBox('stco', 0, 0, stcoBuf.done()), sgpd, sbgp)
+  const smhd = fullBox('smhd', 0, 0, new Buf().u16(0).u16(0).done())
+  const dref = fullBox('dref', 0, 0, new Buf().u32(1).done(), fullBox('url ', 0, 1))
+  const minf = box('minf', smhd, box('dinf', dref), stbl)
+  return box('trak', tkhd, box('edts', elst), box('mdia', mdhd, hdlr, minf))
+}
+
+function buildMoov(samples: Mp4Sample[], opts: Mp4Options, offsets: number[], audio?: Mp4Audio, audioOffsets: number[] = []): Uint8Array {
   const n = samples.length
   const mediaDuration = n * opts.sampleDuration
   const movieTimescale = 1000
-  const movieDuration = Math.round((mediaDuration / opts.timescale) * movieTimescale)
+  const videoDuration = Math.round((mediaDuration / opts.timescale) * movieTimescale)
+  const audioDuration = audio ? Math.round((audio.length / audio.sampleRate) * movieTimescale) : 0
+  const movieDuration = Math.max(videoDuration, audioDuration)
 
   const mvhd = fullBox(
     'mvhd',
@@ -133,7 +245,7 @@ function buildMoov(samples: Mp4Sample[], opts: Mp4Options, offsets: number[]): U
       .zeros(10)
       .bytes(matrix())
       .zeros(24)
-      .u32(2)
+      .u32(audio ? 3 : 2) // next track ID
       .done(),
   )
 
@@ -146,7 +258,7 @@ function buildMoov(samples: Mp4Sample[], opts: Mp4Options, offsets: number[]): U
       .u32(0)
       .u32(1)
       .u32(0)
-      .u32(movieDuration)
+      .u32(videoDuration)
       .zeros(8)
       .u16(0)
       .u16(0)
@@ -226,33 +338,46 @@ function buildMoov(samples: Mp4Sample[], opts: Mp4Options, offsets: number[]): U
   const minf = box('minf', vmhd, box('dinf', dref), stbl)
   const mdia = box('mdia', mdhd, hdlr, minf)
   const trak = box('trak', tkhd, mdia)
-  return box('moov', mvhd, trak)
+  return audio ? box('moov', mvhd, trak, audioTrak(audio, audioOffsets, movieTimescale)) : box('moov', mvhd, trak)
 }
 
-export function buildMp4(samples: Mp4Sample[], opts: Mp4Options): Uint8Array {
+export function buildMp4(samples: Mp4Sample[], opts: Mp4Options, audio?: Mp4Audio): Uint8Array {
   if (!samples.length) throw new Error('No video frames to write.')
   if (!samples[0]!.key) throw new Error('The first frame must be a keyframe, or nothing can start the loop.')
   if (opts.width < 1 || opts.height < 1 || opts.width > 0xffff || opts.height > 0xffff) {
     throw new Error(`${opts.width}x${opts.height} cannot be described in an MP4 sample entry.`)
   }
+  if (audio && audio.frames.length * AAC_FRAME < audio.delay + audio.length) {
+    throw new Error('The sound is shorter than its priming and the loop together.')
+  }
 
   const ftyp = box('ftyp', new Buf().str('isom').u32(0x200).str('isom').str('iso2').str('avc1').str('mp41').done())
-  const mdatPayload = samples.reduce((n, s) => n + s.data.length, 0)
+  const audioFrames = audio?.frames ?? []
+  const mdatPayload = samples.reduce((n, s) => n + s.data.length, 0) + audioFrames.reduce((n, f) => n + f.length, 0)
   // moov's size does not depend on the offset VALUES, so size it once with
   // zeros, then build it for real.
-  const moovSize = buildMoov(samples, opts, samples.map(() => 0)).length
+  const moovSize = buildMoov(samples, opts, samples.map(() => 0), audio, audioFrames.map(() => 0)).length
   const first = ftyp.length + moovSize + 8
   const total = first + mdatPayload
   if (total > 0xffffffff) {
     throw new Error('The loop would be over 4 GiB, past what 32-bit chunk offsets can address. Shorten it or lower the bitrate.')
   }
+  // Both tracks' samples in the order they play, so a player reads them together.
+  type Entry = { data: Uint8Array; time: number; video: boolean }
+  const entries: Entry[] = [
+    ...samples.map((s, i) => ({ data: s.data, time: (i * opts.sampleDuration) / opts.timescale, video: true })),
+    ...audioFrames.map((f, j) => ({ data: f, time: (j * AAC_FRAME) / audio!.sampleRate, video: false })),
+  ]
+  // Stable: a video frame and a sound frame at the same moment keep video first.
+  entries.sort((a, b) => a.time - b.time || Number(b.video) - Number(a.video))
   const offsets: number[] = []
+  const audioOffsets: number[] = []
   let at = first
-  for (const s of samples) {
-    offsets.push(at)
-    at += s.data.length
+  for (const e of entries) {
+    ;(e.video ? offsets : audioOffsets).push(at)
+    at += e.data.length
   }
-  const moov = buildMoov(samples, opts, offsets)
+  const moov = buildMoov(samples, opts, offsets, audio, audioOffsets)
 
   const out = new Uint8Array(total)
   out.set(ftyp, 0)
@@ -260,9 +385,9 @@ export function buildMp4(samples: Mp4Sample[], opts: Mp4Options): Uint8Array {
   const mdatHead = new Buf().u32(8 + mdatPayload).str('mdat').done()
   out.set(mdatHead, ftyp.length + moov.length)
   let o = first
-  for (const s of samples) {
-    out.set(s.data, o)
-    o += s.data.length
+  for (const e of entries) {
+    out.set(e.data, o)
+    o += e.data.length
   }
   return out
 }

@@ -39,7 +39,7 @@
 
 import type { LevelRange } from '../types'
 import { CHROMA_SPAN, KB, KG, KR, LUMA_BLACK, LUMA_SPAN } from './colour'
-import { BT709, buildMp4, type Mp4Sample } from './mp4'
+import { BT709, buildMp4, type Mp4Audio, type Mp4Sample } from './mp4'
 import type { LoopTiming } from '../patterns/loop'
 
 /**
@@ -147,6 +147,8 @@ export type EncodeRequest = {
   /** Draw the frame at time t, filling the whole canvas. */
   render: (ctx: CanvasRenderingContext2D, t: number) => void
   onProgress?: (done: number, total: number) => void
+  /** Sound to put in the file, already encoded (once, for every file of an export). */
+  audio?: Mp4Audio
 }
 
 /** Why this browser or raster cannot make a loop, or null if it can (as far as can be known up front). */
@@ -510,14 +512,18 @@ export async function encodeLoop(req: EncodeRequest): Promise<Uint8Array> {
   const samples: Mp4Sample[] = loopChunks.map((c) => ({ data: c.data, key: c.key }))
   const timescale = fpsDen === 1 ? fpsNum * 1000 : fpsNum
   const sampleDuration = fpsDen === 1 ? 1000 : fpsDen
-  return buildMp4(samples, {
-    width: req.width,
-    height: req.height,
-    timescale,
-    sampleDuration,
-    avcC: avcC as Uint8Array,
-    colour: { ...BT709, fullRange: false },
-  })
+  return buildMp4(
+    samples,
+    {
+      width: req.width,
+      height: req.height,
+      timescale,
+      sampleDuration,
+      avcC: avcC as Uint8Array,
+      colour: { ...BT709, fullRange: false },
+    },
+    req.audio,
+  )
 }
 
 export type PlanRequest = Omit<EncodeRequest, 'width' | 'height' | 'bitrate' | 'onProgress'> & {

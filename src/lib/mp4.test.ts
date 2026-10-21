@@ -61,7 +61,7 @@ function fromAnnexB(bytes: Uint8Array): { samples: Mp4Sample[]; avcC: Uint8Array
 }
 
 type Box = { type: string; start: number; size: number; body: Uint8Array; children?: Box[] }
-const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'dinf'])
+const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'dinf', 'edts'])
 
 function parse(buf: Uint8Array, from = 0, to = buf.length): Box[] {
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
@@ -215,3 +215,120 @@ describe.skipIf(!has('ffprobe') || !has('ffmpeg'))('buildMp4 — read by ffmpeg'
     expect(fromMp4).toEqual(md5(FIXTURE, '-f', 'h264'))
   })
 })
+
+/**
+ * Sound. The fixture is ffmpeg's own AAC encoder (scripts/make-aac-fixture.sh):
+ * two seconds of 48 kHz stereo with a beep starting at exactly 0.5 s and 1.5 s.
+ * ffmpeg's encoder primes 1024 samples, so the file must say to skip 1024, and
+ * decoded from the MP4 the beeps must start where they were put.
+ */
+const AAC_FIXTURE = join(__dirname, '../../test/fixtures/aac-48k-stereo.aac')
+const AAC_PRIMING = 1024
+
+/** ADTS frames to raw AAC frames, and the AudioSpecificConfig the ADTS headers describe. */
+function fromAdts(bytes: Uint8Array): { frames: Uint8Array[]; asc: Uint8Array } {
+  const frames: Uint8Array[] = []
+  let asc: Uint8Array | null = null
+  for (let at = 0; at + 7 <= bytes.length; ) {
+    if (bytes[at] !== 0xff || (bytes[at + 1]! & 0xf6) !== 0xf0) throw new Error(`no ADTS sync at ${at}`)
+    const header = bytes[at + 1]! & 0x01 ? 7 : 9
+    const length = ((bytes[at + 3]! & 0x03) << 11) | (bytes[at + 4]! << 3) | (bytes[at + 5]! >> 5)
+    if (!asc) {
+      const object = (bytes[at + 2]! >> 6) + 1
+      const rate = (bytes[at + 2]! >> 2) & 0x0f
+      const channels = ((bytes[at + 2]! & 0x01) << 2) | (bytes[at + 3]! >> 6)
+      const v = (object << 11) | (rate << 7) | (channels << 3)
+      asc = Uint8Array.of(v >> 8, v & 0xff)
+    }
+    frames.push(bytes.subarray(at + header, at + length))
+    at += length
+  }
+  return { frames, asc: asc! }
+}
+
+const adts = fromAdts(new Uint8Array(readFileSync(AAC_FIXTURE)))
+const sound = { ...adts, sampleRate: 48000, channels: 2, bitrate: 128000, delay: AAC_PRIMING, length: 96000 }
+const withSound = buildMp4(samples, { width: 64, height: 48, timescale: 10000, sampleDuration: 1000, avcC, colour: { ...BT709, fullRange: false } }, sound)
+const soundBoxes = parse(withSound)
+const audioTrak = () => soundBoxes.find((b) => b.type === 'moov')!.children!.filter((b) => b.type === 'trak')[1]!
+const audioPath = (...path: string[]) => find([audioTrak()], ['trak', ...path])
+
+describe('buildMp4 — with sound', () => {
+  it('has a second track, for the sound, and says there will be a third track id next', () => {
+    const moov = find(soundBoxes, ['moov'])
+    expect(moov.children!.filter((b) => b.type === 'trak')).toHaveLength(2)
+    expect(u32(find(soundBoxes, ['moov', 'mvhd']).body, 4 + 92)).toBe(3)
+    expect(String.fromCharCode(...audioPath('mdia', 'hdlr').body.subarray(8, 12))).toBe('soun')
+  })
+
+  it('skips the priming with an edit list, then plays the loop\'s length', () => {
+    const elst = audioPath('edts', 'elst').body
+    expect(u32(elst, 4)).toBe(1)
+    expect(u32(elst, 8)).toBe(2000) // ms, the movie timescale
+    expect(u32(elst, 12)).toBe(AAC_PRIMING)
+  })
+
+  it('marks every frame as needing the one before, as Apple\'s encoder does, so AVFoundation trims only once', () => {
+    const sgpd = audioPath('mdia', 'minf', 'stbl', 'sgpd').body
+    expect(String.fromCharCode(...sgpd.subarray(4, 8))).toBe('roll')
+    expect(new DataView(sgpd.buffer, sgpd.byteOffset).getInt16(16)).toBe(-1)
+    const sbgp = audioPath('mdia', 'minf', 'stbl', 'sbgp').body
+    expect(u32(sbgp, 12)).toBe(adts.frames.length)
+  })
+
+  it('points every sound frame\'s offset at that frame\'s bytes', () => {
+    const stco = audioPath('mdia', 'minf', 'stbl', 'stco').body
+    expect(u32(stco, 4)).toBe(adts.frames.length)
+    adts.frames.forEach((f, i) => {
+      const at = u32(stco, 8 + i * 4)
+      expect(withSound.subarray(at, at + f.length)).toEqual(f)
+    })
+  })
+
+  it('keeps the video exactly as it was without sound', () => {
+    const v = (b: Box[]) => find(b, ['moov', 'trak', 'mdia', 'minf', 'stbl', 'stsz']).body
+    expect(v(soundBoxes)).toEqual(v(boxes))
+  })
+
+  it('refuses sound shorter than its priming and the loop together', () => {
+    const opts = { width: 64, height: 48, timescale: 10000, sampleDuration: 1000, avcC }
+    expect(() => buildMp4(samples, opts, { ...sound, length: 96000 * 10 })).toThrow(/shorter/)
+  })
+})
+
+describe.skipIf(!has('ffprobe') || !has('ffmpeg'))('buildMp4 — sound read by ffmpeg', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'test-card-mp4-sound-'))
+  dirs.push(dir)
+  const file = join(dir, 'sound.mp4')
+  writeFileSync(file, withSound)
+
+  it('ffprobe sees H.264 and AAC-LC 48 kHz stereo, both 2 s from 0', () => {
+    const json = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', file]).toString())
+    const [v, a] = json.streams
+    expect(v.codec_name).toBe('h264')
+    expect(a.codec_name).toBe('aac')
+    expect(a.profile).toBe('LC')
+    expect([Number(a.sample_rate), a.channels]).toEqual([48000, 2])
+    expect(Number(a.start_time)).toBe(0)
+    expect(Number(a.duration)).toBeCloseTo(2, 3)
+    expect(Number(json.format.duration)).toBeCloseTo(2, 3)
+  })
+
+  it('starts each beep where it was put, so the priming really is skipped', () => {
+    const pcm = new Float32Array(new Uint8Array(execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-map', '0:a', '-ac', '1', '-f', 'f32le', '-'])).buffer)
+    const peak = pcm.reduce((m, v) => Math.max(m, Math.abs(v)), 0)
+    const onsets: number[] = []
+    let last = -Infinity
+    pcm.forEach((v, i) => {
+      if (Math.abs(v) > peak * 0.1) {
+        if (i - last > 4800) onsets.push(i / 48000)
+        last = i
+      }
+    })
+    expect(onsets).toHaveLength(2)
+    // Within a millisecond: the 1024 samples of priming would be 21 ms.
+    expect(onsets[0]!).toBeCloseTo(0.5, 3)
+    expect(onsets[1]!).toBeCloseTo(1.5, 3)
+  })
+})
+

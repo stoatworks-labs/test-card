@@ -8,6 +8,7 @@ import {
   CentreControls,
   ClassicControls,
   LevelsControls,
+  AvSyncControls,
   DinosaurControls,
   HamsterControls,
   ImageControls,
@@ -51,6 +52,7 @@ const KINDS: { kind: PatternKind; hint: string }[] = [
   { kind: 'pixel-check', hint: '1px checker and line bursts' },
   { kind: 'classic-card', hint: 'Grid, castellations, a circle with your logo' },
   { kind: 'levels-check', hint: 'Full or limited range, and which end' },
+  { kind: 'av-sync', hint: 'Flash and beep, read the offset in frames' },
 ]
 
 export function PatternPanel({
@@ -117,7 +119,8 @@ export function PatternPanel({
       {kind === 'pumpkins' ? <PumpkinControls opts={settings.pumpkins} patch={sub('pumpkins')} /> : null}
       {kind === 'classic-card' ? <ClassicControls opts={settings.classic} patch={sub('classic')} /> : null}
       {kind === 'levels-check' ? <LevelsControls opts={settings.levelsCheck} patch={sub('levelsCheck')} /> : null}
-      {kind === 'classic-card' ? (
+      {kind === 'av-sync' ? <AvSyncControls opts={settings.avSync} patch={sub('avSync')} /> : null}
+      {kind === 'classic-card' || kind === 'av-sync' ? (
         <CentreControls opts={settings.centre} patch={sub('centre')} image={image} onImage={onImage} />
       ) : null}
       {kind === 'dino-scroll' || kind === 'volcano' || kind === 'spooky-forest' || kind === 'haunted-house' ? (

@@ -369,6 +369,29 @@ export function ClassicControls({ opts, patch }: { opts: PatternSettings['classi
   )
 }
 
+export function AvSyncControls({ opts, patch }: { opts: PatternSettings['avSync']; patch: Patch }) {
+  return (
+    <>
+      <h3>AV sync</h3>
+      <div className="row">
+        <Num
+          label="Flash and beep every (s)"
+          value={opts.everySeconds}
+          min={1}
+          max={10}
+          onChange={(everySeconds) => patch({ everySeconds: Math.max(1, Math.round(everySeconds)) })}
+        />
+        <Num label="Beep pitch (Hz)" value={opts.toneHz} min={100} max={10000} onChange={(toneHz) => patch({ toneHz })} />
+      </div>
+      <p className="hint">
+        The MP4 has sound: a one-frame beep at -18 dBFS on every flash. Film the screen with sound, find
+        where the beep starts, and the box lit on that frame is how many frames late (+) or early (−)
+        the sound is. The preview is silent; the PNG is just a picture.
+      </p>
+    </>
+  )
+}
+
 export function LevelsControls({ opts, patch }: { opts: PatternSettings['levelsCheck']; patch: Patch }) {
   return (
     <>

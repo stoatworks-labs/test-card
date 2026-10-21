@@ -50,6 +50,7 @@ export const PATTERN_SLUGS: Record<PatternSettings['kind'], string> = {
   'haunted-house': 'hauntedhouse',
   'classic-card': 'classic',
   'levels-check': 'levels',
+  'av-sync': 'avsync',
 }
 
 /** PNG for a still, MP4 for a loop. The loop's name says its frame rate and length too. */

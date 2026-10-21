@@ -107,6 +107,8 @@ export const DEFAULT_SETTINGS: PatternSettings = {
 
   levelsCheck: { notes: true },
 
+  avSync: { everySeconds: 1, toneHz: 1000 },
+
   ocean: { seed: 1, time: 'sunset', swell: 1 },
 
   scene: { seed: 1, speed: 3 },

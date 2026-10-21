@@ -140,6 +140,7 @@ export type PatternKind =
   // Classic and technical.
   | 'classic-card'
   | 'levels-check'
+  | 'av-sync'
 
 /**
  * Output level range.
@@ -376,6 +377,13 @@ export type ClassicCardOptions = {
   ident: boolean
 }
 
+export type AvSyncOptions = {
+  /** Seconds between sync frames: one flash and one beep each. */
+  everySeconds: number
+  /** The beep's pitch. */
+  toneHz: number
+}
+
 export type LevelsCheckOptions = {
   /** Write what each result means on the card itself. */
   notes: boolean
@@ -483,6 +491,7 @@ export type PatternSettings = {
   centre: CentreOptions
   classic: ClassicCardOptions
   levelsCheck: LevelsCheckOptions
+  avSync: AvSyncOptions
   ocean: OceanOptions
   scene: SceneOptions
   broken: BrokenWallOptions

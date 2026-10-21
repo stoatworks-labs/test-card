@@ -35,6 +35,7 @@ import { drawDinoScroll, drawOcean, drawVolcano } from './scenes'
 import { drawHauntedHouse, drawPumpkins, drawSpookyForest } from './halloween'
 import { drawClassicCard } from './classic'
 import { drawLevelsCheck } from './levels'
+import { drawAvSync, SAMPLE_RATE, syncAudio } from './avsync'
 import { drawBrokenWall } from './broken'
 import { drawImagePattern } from './image'
 import { loopTiming } from './loop'
@@ -148,6 +149,9 @@ export function paintPattern(
     case 'levels-check':
       drawLevelsCheck(ctx, w, h, settings.levelsCheck)
       break
+    case 'av-sync':
+      drawAvSync(ctx, w, h, settings.avSync, settings.animation, settings.centre, env)
+      break
     case 'broken-wall': {
       const base: PatternSettings = { ...settings, kind: settings.broken.base }
       drawBrokenWall(
@@ -252,6 +256,16 @@ export function setPatternImage(img: PatternImage | null) {
 }
 export function getPatternImage(): PatternImage | null {
   return patternImage
+}
+
+/**
+ * The sound a pattern's loop carries, one channel of it, or null for none. Only
+ * AV sync has any; its beeps are worked out from the same loop timing as its
+ * flashes, so they land on the same frames.
+ */
+export function patternAudio(settings: PatternSettings): { sampleRate: number; channels: number; pcm: Float32Array } | null {
+  if (settings.kind !== 'av-sync') return null
+  return { sampleRate: SAMPLE_RATE, channels: 2, pcm: syncAudio(loopTiming(settings.animation), settings.avSync) }
 }
 
 /** The moment a still of a moving pattern shows, and the loop it belongs to. */
@@ -434,6 +448,7 @@ export const PATTERN_LABELS: Record<PatternSettings['kind'], string> = {
   'haunted-house': 'Haunted house',
   'classic-card': 'Classic test card',
   'levels-check': 'Levels check',
+  'av-sync': 'AV sync',
 }
 
 /**

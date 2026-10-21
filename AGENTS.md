@@ -49,7 +49,10 @@ src/engine.ts         the embeddable entry: settings, painters, limits, no React
 src/patterns/art/*.ts the artwork, as polygons: shapes, bananas, dinosaurs,
                       hamster sprites, scenery, halloween. Only shapes.fillShapes (and
                       tracePath, into a canvas or a Path2D) touches a canvas
-src/lib/mp4.ts        hand-rolled MP4 writer, one H.264 track
+src/lib/mp4.ts        hand-rolled MP4 writer, one H.264 track and optionally one AAC track
+src/lib/audio.ts      WebCodecs AAC encode, with the encoder's priming measured each time
+src/patterns/avsync.ts AV sync: sync frames, the beep's samples (pure) + painter
+src/patterns/levels.ts the levels check: layout (pure) + painter
 src/lib/video.ts      WebCodecs encode loop, the RGB -> Y′CbCr 4:2:0 conversion, and the
                       tile planner for rasters the encoder won't take whole
 src/import/*.ts       one file per source format + detect.ts to sniff
@@ -228,6 +231,17 @@ refuses anything estimated over `MAX_LOOP_BYTES` (1 GiB) before frame 0, and
 export adds up every loop going in one ZIP (tiles made 8K outputs possible, and
 three of them at 1 GB each would otherwise be built and then die): the finished
 files are all held until the ZIP is built.
+
+**AAC primes, and AVFoundation trims it twice unless told not to.** An AAC encoder starts with
+priming samples: 2112 (44 ms, more than a frame) from Chrome on a Mac, 1024 from ffmpeg's. The MP4
+skips them with an edit list (`elst` media_time = the priming), and `encodeLoopAudio` measures the
+priming every time by sending a click through and finding it again, rather than trusting a number.
+But AVFoundation, which Resolume plays through on a Mac, ALSO trims the priming itself unless the
+track has the `roll` sample group (`sgpd`/`sbgp`, roll distance -1) that Apple's own encoder writes:
+without it the sound played 2112 samples early in AVFoundation and on time in ffmpeg. Found by
+disabling that group in an `afconvert` file, which then went early too. Keep both boxes, and check
+any change to the audio track in both players (`scratchpad`-style: decode with ffmpeg, read with an
+AVAssetReader), not one.
 
 **Dead trees are cached as `Path2D`s.** A Halloween dead tree is a few hundred polygons and
 never changes, so `drawTree` builds it once at its own origin, keyed by seed, size (to a quarter

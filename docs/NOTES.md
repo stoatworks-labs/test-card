@@ -285,3 +285,35 @@ and 235 picked out, always full range.
 Not run: a real chain with each mismatch. That's the obvious next check, with a
 GPU set to limited RGB into a monitor set to full and the other way round.
 
+## 2026-10-21 — AV sync, and sound in the MP4
+
+Allan asked for "an av sync test pattern, again ideally with the stoatworks logo
+or a definable alternative". A sync frame once a second (flash, hand at the top,
+box 0), boxes -6..+6 lit one per frame either side, the centrepiece in the ring,
+and a one-frame 1 kHz beep at -18 dBFS starting on each sync frame's first
+sample. Sync frames sit half an interval from the wrap, so the file starts and
+ends quiet.
+
+The MP4 writer gained an AAC track (`mp4a`/`esds`, `smhd`, interleaved with the
+video in time order) and `audio.ts` encodes it with WebCodecs. Chrome 152 on this
+Mac: AAC-LC supported (and Opus). Priming measured with a click: 2112 samples,
+the Apple figure. The edit list skips it.
+
+**AVFoundation trimmed it twice.** First export: ffmpeg had every beep within
+0.23 ms of its flash, but an AVAssetReader (scratchpad Swift) read them 44 ms
+EARLY. With media_time 0 instead, AVFoundation was right and ffmpeg 44 ms late.
+An `afconvert` AAC file had the same edit list and read right in both; with its
+`roll` sample group disabled, AVFoundation read it early too. So the track now
+writes Apple's `sgpd`/`sbgp` roll group, and both agree.
+
+Measured on exports through the real button, 3840 x 2160, 10 s, decoded by
+ffmpeg (beep onset at 10% of peak against the first frame whose side panel is
+white): 30 fps, beep minus flash +0.10 to +0.23 ms over all ten; 29.97, +0.21
+to +0.23; 25, +0.17 to +0.23. AVFoundation, 30 fps with the roll group: beeps at
+0.5001, 1.5002 ... 9.5002 s, sync frames at 0.5, 1.5 ... 9.5. One channel's
+tone: -17.99 dBFS RMS-as-peak, 1 kHz. First and last 100 ms silent. ffprobe:
+both streams start at 0 and last 10.000 s (10.010 at 29.97).
+
+Not run: Resolume itself, a camera filming a screen, Windows (whose AAC
+encoder will prime differently; that's what the measurement is for).
+

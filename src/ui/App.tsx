@@ -17,6 +17,7 @@ import {
 import {
   canvasToPng,
   canvasRange,
+  patternAudio,
   renderBlockers,
   renderComposition,
   renderCompositionTo,
@@ -29,6 +30,7 @@ import { isAnimated } from '../patterns/env'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
 import { encodePlan, MAX_LOOP_BYTES, planBytes, planLoop, type EncodeRequest, type LoopPlan } from '../lib/video'
+import { audioProblem, encodeLoopAudio, type EncodedAudio } from '../lib/audio'
 import { uniqueNames } from '../lib/zip'
 import { clearImage, decodeImage, loadImage } from '../state/image-store'
 
@@ -126,6 +128,12 @@ export default function App() {
     const timing = loopTiming(settings.animation)
     const range = canvasRange(settings)
     const bitrate = Math.max(0, settings.animation.bitrateMbps) * 1e6
+    // Sound, for the patterns that have it: refused up front if the browser can't, encoded once for every file.
+    const sound = patternAudio(settings)
+    if (sound) {
+      const problem = await audioProblem(sound)
+      if (problem) throw new Error(problem)
+    }
 
     type Job = { label: string; name: string; width: number; height: number; render: EncodeRequest['render'] }
     const composition = store.mode === 'composition'
@@ -181,6 +189,12 @@ export default function App() {
     let next = 0
     const names = wanted.map((list) => list.map(() => unique[next++]!))
 
+    let audio: EncodedAudio | undefined
+    if (sound) {
+      setBusy('Encoding the sound…')
+      audio = await encodeLoopAudio(sound)
+    }
+
     const files: { name: string; data: Uint8Array }[] = []
     const tiled: TiledLoop[] = []
     const cells: string[] = []
@@ -196,6 +210,7 @@ export default function App() {
       const data = await encodePlan(loop, {
         timing,
         range,
+        audio,
         render: job.render,
         onProgress: (done, frames, tile) => {
           if (cancel.current) throw new Cancelled('Cancelled.')

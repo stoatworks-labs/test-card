@@ -79,6 +79,7 @@ const MOVING: ReadonlySet<PatternSettings['kind']> = new Set([
   'volcano',
   'spooky-forest',
   'haunted-house',
+  'av-sync',
 ])
 
 /** Whether a kind of pattern moves with these settings. Pumpkins only do if they have candles or faces to pull. */
