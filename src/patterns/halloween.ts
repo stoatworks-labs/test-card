@@ -108,12 +108,16 @@ export function walkerAt(w: Walker, lap: number, t: number, loopSeconds: number)
 }
 
 /**
- * How far a walker goes round per loop. One width of the world on an ordinary
- * output; on a surface much wider than it is tall, a whole fraction of it, so
- * the dead keep a walking pace instead of sprinting across a span of six.
+ * How far anything that crosses the picture goes per loop: a walker, a witch, a
+ * vampire, a bat. The whole world on anything up to about one and a half 16:9
+ * screens wide. On a wider surface it is 1.3 screens, so things keep their pace
+ * instead of sprinting across a span of six, and the copies that repeat every lap
+ * don't land in the same place on every output (a lap of exactly one output
+ * width would show each output the same six zombies in the same poses).
  */
 export function walkLap(world: { widthPx: number; heightPx: number }): number {
-  return world.widthPx / Math.max(1, Math.round(world.widthPx / (world.heightPx * 16 / 9)))
+  const screen = (world.heightPx * 16) / 9
+  return world.widthPx <= screen * 1.5 ? world.widthPx : screen * 1.3
 }
 
 // ---------------------------------------------------------------------------
@@ -137,13 +141,23 @@ function wound(pts: Pt[]): Pt[] {
  * seed, size and forking, so a different raster or seed builds afresh.
  */
 const treeCache = new Map<string, Path2D>()
+/** Trees drawn so far this frame, and the most the cache may hold: twice the last frame's. */
+let treesThisFrame = 0
+let treeLimit = 400
+
+/** Call at the start of each frame, so a very wide raster's thousand trees aren't rebuilt every frame. */
+function treeFrame() {
+  treeLimit = Math.max(400, treesThisFrame * 2)
+  treesThisFrame = 0
+}
 
 function drawTree(ctx: Ctx, x: number, y: number, h: number, seed: number, depth: number, colour: string) {
   const size = Math.round(h * 4) / 4
   const key = `${seed}:${size}:${depth}`
+  treesThisFrame++
   let path = treeCache.get(key)
   if (!path) {
-    if (treeCache.size > 400) treeCache.clear()
+    if (treeCache.size >= treeLimit) treeCache.clear()
     path = new Path2D()
     for (const s of deadTree(0, 0, size, seed, colour, depth)) tracePath(path, wound(s.pts), s.smooth !== false, true)
     treeCache.set(key, path)
@@ -255,7 +269,9 @@ function drawMist(
     const h = makeRidge(hash(seed, k), period, { base: 1, octaves: 3, rough: 0.5 })
     const top = y - k * WH * 0.02
     const offset = scroll + phase(env.t, env.loopSeconds, 1 + k) * period
-    const band = ridgeShape(h, x0, x1, top, WH * 0.05, top + depth, colour, offset)
+    // A sample step that divides the period, so the bank is cut the same way after it wraps.
+    const step = period / Math.max(1, Math.round(period / 6))
+    const band = ridgeShape(h, x0, x1, top, WH * 0.05, top + depth, colour, offset, step)
     // Thickest just under its crests, thinning to nothing at the bottom: no hard edge.
     const fade = ctx.createLinearGradient(0, top - WH * 0.05, 0, top + depth)
     fade.addColorStop(0, colour + '00')
@@ -326,11 +342,12 @@ function drawBats(
   span: [number, number],
   colour: string,
 ) {
-  const { widthPx: WW, heightPx: WH } = env.world
+  const { heightPx: WH } = env.world
   const T = env.loopSeconds
+  const lap = walkLap(env.world)
   const r = rng(seed)
   for (let i = 0; i < n; i++) {
-    const baseX = r() * WW
+    const baseX = r() * lap
     const y = between(r, top, bottom)
     const s = WH * between(r, span[0], span[1])
     const dir = r() < 0.5 ? -1 : 1
@@ -338,10 +355,10 @@ function drawBats(
     const weaves = 1 + Math.floor(r() * 3)
     const weaveAt = r()
     const weave = between(r, 0.6, 1.6)
-    const x = baseX + dir * phase(env.t, T, 1) * WW
+    const x = baseX + dir * phase(env.t, T, 1) * lap
     const yy = y + s * weave * Math.sin(TAU * (phase(env.t, T, weaves) + weaveAt))
     const shapes = bat(s, phase(env.t, T, wholeCycles(T * flapHz)), colour)
-    eachRepeat(x, WW, x0 - s, x1 + s, (px) => {
+    eachRepeat(x, lap, x0 - s, x1 + s, (px) => {
       ctx.save()
       ctx.translate(px, yy)
       fillShapes(ctx, shapes)
@@ -350,7 +367,7 @@ function drawBats(
   }
 }
 
-/** One thing flying across the sky: a whole lap per loop, swooping a whole number of times. */
+/** One thing flying across the sky: a whole lap (`walkLap`) per loop, swooping a whole number of times. */
 type Flyer = { x: number; y: number; angle: number; dir: number }
 
 function flight(
@@ -365,7 +382,7 @@ function flight(
   const T = env.loopSeconds
   const sw = TAU * (phase(env.t, T, swoops) + swoopAt)
   // Nose down as it drops, nose up as it climbs.
-  return { x: baseX + dir * phase(env.t, T, 1) * env.world.widthPx, y: y + swoopPx * Math.sin(sw), angle: 0.15 * Math.cos(sw) * dir, dir }
+  return { x: baseX + dir * phase(env.t, T, 1) * walkLap(env.world), y: y + swoopPx * Math.sin(sw), angle: 0.15 * Math.cos(sw) * dir, dir }
 }
 
 // ---------------------------------------------------------------------------
@@ -374,10 +391,19 @@ function flight(
 
 const TILE_NIGHTS = ['#1b1230', '#10201c', '#24122a', '#111a2c', '#20160e', '#170f22']
 
-/** The face carved on a tile: decided by the seed, the tile and, off a span, the output. */
-export function tileFace(opts: PumpkinOptions, tile: Pick<EnvTile, 'col' | 'row'>, localKey: number): PumpkinFace | null {
+/**
+ * Where a tile sits on the surface, which is what its pumpkin is keyed on. Not its
+ * column and row: LED tiles start again at each output's own origin, so keying on
+ * those gave every output of a span the same patch, flickering in step.
+ */
+export function tileKey(seed: number, tile: Pick<EnvTile, 'x' | 'y'>, env: Pick<PaintEnv, 'view' | 'localKey'>): number {
+  return hash(seed, Math.round(tile.x + env.view.x), Math.round(tile.y + env.view.y), env.localKey)
+}
+
+/** The face carved on a tile, from the faces ticked; null when none are. */
+export function tileFace(opts: PumpkinOptions, key: number): PumpkinFace | null {
   const faces = PUMPKIN_FACES.filter((f) => opts.faces.includes(f))
-  return faces.length ? pick(rng(hash(opts.seed, tile.col, tile.row, localKey)), faces) : null
+  return faces.length ? pick(rng(key), faces) : null
 }
 
 export function drawPumpkins(ctx: Ctx, w: number, h: number, opts: PumpkinOptions, env: PaintEnv) {
@@ -387,8 +413,8 @@ export function drawPumpkins(ctx: Ctx, w: number, h: number, opts: PumpkinOption
   const T = env.loopSeconds
   const tiles = env.tiles.length ? env.tiles : [{ x: 0, y: 0, width: w, height: h, col: 0, row: 0, ref: 'A1' }]
   for (const t of tiles) {
-    const key = hash(opts.seed, t.col, t.row, env.localKey, 1)
-    const face = tileFace(opts, t, env.localKey)
+    const key = tileKey(opts.seed, t, env)
+    const face = tileFace(opts, key)
     const lit = !face ? 0 : opts.flicker ? candleLevel(env.t, T, key) : 0.8
     const e = face && opts.expressions ? expressionLevel(env.t, T, key) : 0
     ctx.save()
@@ -441,6 +467,9 @@ export function drawSpookyForest(ctx: Ctx, w: number, h: number, opts: SceneOpti
   const off = widths.map((n) => layerOffset(n, WW, env.t, T))
   const r = rng(hash(opts.seed, 201))
   const per = (k: number) => Math.max(1, Math.round(WW / (WH * k)))
+  const lap = walkLap(env.world)
+  const perLap = (k: number) => Math.max(1, Math.round(lap / (WH * k)))
+  treeFrame()
   ctx.save()
   ctx.translate(-env.view.x, -env.view.y)
   const x0 = env.view.x - WH * 0.6
@@ -453,11 +482,11 @@ export function drawSpookyForest(ctx: Ctx, w: number, h: number, opts: SceneOpti
   drawWisps(ctx, env, hash(opts.seed, 203), WH * 0.12, WH * 0.34, '#241c44', 4)
 
   // Bats far off, behind everything else.
-  drawBats(ctx, env, x0, x1, hash(opts.seed, 204), Math.max(6, per(0.16)), WH * 0.08, WH * 0.5, [0.014, 0.03], '#0c0915')
+  drawBats(ctx, env, x0, x1, hash(opts.seed, 204), Math.max(6, perLap(0.16)), WH * 0.08, WH * 0.5, [0.014, 0.03], '#0c0915')
 
   // Layer 0: far hills, and mist along their foot.
   const hills = makeRidge(hash(opts.seed, 220), WW, { base: 3, rough: 0.42 })
-  fillShapes(ctx, [ridgeShape(hills, x0, x1, WH * 0.68, WH * 0.13, WH, FOREST.hills, off[0])])
+  fillShapes(ctx, [ridgeShape(hills, x0, x1, WH * 0.68, WH * 0.13, WH, FOREST.hills, off[0], WW / Math.max(1, Math.round(WW / 6)))])
   drawMist(ctx, env, x0, x1, hash(opts.seed, 221), off[0]!, WH * 0.67, WH * 0.08, FOREST.mist, 0.22)
 
   // Layer 1: the far wood.
@@ -506,8 +535,8 @@ export function drawSpookyForest(ctx: Ctx, w: number, h: number, opts: SceneOpti
 
   // Witches, in front of the middle wood and behind the near one.
   const wr = rng(hash(opts.seed, 240))
-  for (let i = 0, n = per(0.6); i < n; i++) {
-    const baseX = wr() * WW
+  for (let i = 0, n = perLap(0.6); i < n; i++) {
+    const baseX = wr() * lap
     const y = WH * between(wr, 0.12, 0.4)
     const L = WH * between(wr, 0.15, 0.22)
     const dir = wr() < 0.65 ? 1 : -1
@@ -519,7 +548,7 @@ export function drawSpookyForest(ctx: Ctx, w: number, h: number, opts: SceneOpti
     const shapes = witch(L, phase(env.t, T, wholeCycles(T * flutterHz)), cat, '#0a0710')
     // Moonlight catching her edge, then the witch over it.
     const rim = silhouette(shapes, '#6f62a8')
-    eachRepeat(f.x, WW, x0 - L, x1 + L, (px) => {
+    eachRepeat(f.x, lap, x0 - L, x1 + L, (px) => {
       ctx.save()
       ctx.translate(px, f.y)
       ctx.rotate(f.angle)
@@ -601,13 +630,16 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
   const x1 = env.view.x + w + WH * 0.6
 
   // Where everything is, decided before anything is drawn or skipped.
+  treeFrame()
   const houseX = WW * between(r, 0.4, 0.6)
+  // From the height on a landscape picture; held to the width on a portrait one, or both ends are cut off.
+  const houseH = Math.min(WH * 0.5, WW * 0.68)
   const hillTop = WH * 0.6
   const hillFoot = WH * 0.8
   const hillHalf = WH * 0.55
   const treeSide = r() < 0.5 ? -1 : 1
-  const moon = { x: houseX - treeSide * WH * between(r, 0.12, 0.3), y: WH * between(r, 0.22, 0.28), r: WH * 0.15 }
-  const house = hauntedHouse(houseX, hillTop + WH * 0.004, WH * 0.5, hash(opts.seed, 302))
+  const moon = { x: houseX - treeSide * houseH * between(r, 0.24, 0.6), y: WH * between(r, 0.22, 0.28), r: WH * 0.15 }
+  const house = hauntedHouse(houseX, hillTop + WH * 0.004, houseH, hash(opts.seed, 302))
   // The ghost haunts a dark window, where it shows; a lit one if every window is lit.
   const unlit = house.windows.map((win, i) => [win, i] as const).filter(([win, i]) => win.state === 'dark' && i < house.windows.length - 1)
   const lit = house.windows.map((win, i) => [win, i] as const).filter(([win, i]) => win.state === 'lit' && i < house.windows.length - 1)
@@ -621,9 +653,10 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
   drawWisps(ctx, env, hash(opts.seed, 303), WH * 0.15, WH * 0.4, '#251d46', 4)
 
   // Vampires, in the back: they pass behind the tower and the hills.
+  const lap = walkLap(env.world)
   const vr = rng(hash(opts.seed, 310))
-  for (let i = 0, n = Math.max(2, Math.round(WW / (WH * 0.6))); i < n; i++) {
-    const baseX = vr() * WW
+  for (let i = 0, n = Math.max(2, Math.round(lap / (WH * 0.6))); i < n; i++) {
+    const baseX = vr() * lap
     const y = WH * between(vr, 0.08, 0.36)
     const B = WH * between(vr, 0.15, 0.21)
     const dir = vr() < 0.5 ? 1 : -1
@@ -633,7 +666,7 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
     const swoop = WH * between(vr, 0.03, 0.06)
     const f = flight(env, baseX, y, dir, swoops, swoopAt, swoop)
     const shapes = vampire(B, phase(env.t, T, wholeCycles(T * flapHz)))
-    eachRepeat(f.x, WW, x0 - B, x1 + B, (px) => {
+    eachRepeat(f.x, lap, x0 - B, x1 + B, (px) => {
       ctx.save()
       ctx.translate(px, f.y)
       ctx.rotate(f.angle)
@@ -676,8 +709,8 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
   for (let x = Math.floor(x0 / step) * step; x <= x1 + step; x += step) hill.push([x, hillY(x, houseX, hillTop, hillFoot, hillHalf)])
   hill.push([x1 + step, WH + 2])
   fillShapes(ctx, [{ pts: hill, fill: '#110d1c', smooth: false }])
-  const treeX = houseX + treeSide * WH * 0.47
-  drawTree(ctx, treeX, hillY(treeX, houseX, hillTop, hillFoot, hillHalf) + WH * 0.01, WH * 0.42, hash(opts.seed, 321), 5, '#0c0914')
+  const treeX = houseX + treeSide * houseH * 0.94
+  drawTree(ctx, treeX, hillY(treeX, houseX, hillTop, hillFoot, hillHalf) + WH * 0.01, houseH * 0.84, hash(opts.seed, 321), 5, '#0c0914')
 
   fillShapes(ctx, house.body)
   house.windows.forEach((win, i) => {
@@ -753,7 +786,6 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
 
   // The dead, walking: zombies one way, skeletons the other, the nearer drawn last.
   const wkr = rng(hash(opts.seed, 360))
-  const lap = walkLap(env.world)
   const walkers: Walker[] = []
   for (let i = 0; i < 6; i++) {
     const kind = i % 2 ? 'skeleton' : 'zombie'

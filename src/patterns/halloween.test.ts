@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '../state/defaults'
-import { candleLevel, expressionLevel, tileFace, walkerAt, walkLap, type Walker } from './halloween'
+import { candleLevel, expressionLevel, tileFace, tileKey, walkerAt, walkLap, type Walker } from './halloween'
 import { loopTiming } from './loop'
 import {
   bat,
@@ -84,24 +84,28 @@ describe('Halloween timing loops with no seam', () => {
     }
   })
 
-  it('walks a lap that keeps the dead at a walking pace on a wide span', () => {
+  it('crosses the whole picture on one output, and keeps a walking pace on a wide span', () => {
     expect(walkLap({ widthPx: 1920, heightPx: 1080 })).toBe(1920)
-    const wide = walkLap({ widthPx: 1920 * 6, heightPx: 1080 })
-    expect(wide).toBe(1920)
-    expect(Number.isInteger((1920 * 6) / wide)).toBe(true)
     expect(walkLap({ widthPx: 1080, heightPx: 1920 })).toBe(1080)
+    const wide = walkLap({ widthPx: 1920 * 6, heightPx: 1080 })
+    expect(wide).toBeCloseTo(1920 * 1.3, 6)
+    // Not a whole number of outputs, so each output of the span sees a different crowd.
+    expect(Number.isInteger(wide / 1920)).toBe(false)
   })
 })
 
 describe('the pumpkin patch', () => {
   const opts = DEFAULT_SETTINGS.pumpkins
 
+  const at = (col: number, row: number) => ({ x: col * 168, y: row * 168 })
+  const here = { view: { x: 0, y: 0 }, localKey: 0 }
+
   it('deals the same face to the same tile every time, and a variety across the wall', () => {
     const faces = new Set<string | null>()
     for (let col = -3; col < 12; col++) {
       for (let row = 0; row < 6; row++) {
-        const f = tileFace(opts, { col, row }, 0)
-        expect(tileFace(opts, { col, row }, 0)).toBe(f)
+        const f = tileFace(opts, tileKey(opts.seed, at(col, row), here))
+        expect(tileFace(opts, tileKey(opts.seed, at(col, row), here))).toBe(f)
         faces.add(f)
       }
     }
@@ -109,13 +113,19 @@ describe('the pumpkin patch', () => {
   })
 
   it('carves only the faces ticked, and none when none are', () => {
-    for (let col = 0; col < 20; col++) expect(tileFace({ ...opts, faces: ['sly'] }, { col, row: 1 }, 0)).toBe('sly')
-    expect(tileFace({ ...opts, faces: [] }, { col: 0, row: 0 }, 0)).toBeNull()
+    for (let col = 0; col < 20; col++) expect(tileFace({ ...opts, faces: ['sly'] }, tileKey(1, at(col, 1), here))).toBe('sly')
+    expect(tileFace({ ...opts, faces: [] }, tileKey(1, at(0, 0), here))).toBeNull()
   })
 
+  const deal = (env: typeof here) => Array.from({ length: 30 }, (_, col) => tileFace(opts, tileKey(opts.seed, at(col, 0), env))).join()
+
   it('gives outputs that are each their own world their own arrangement', () => {
-    const deal = (key: number) => Array.from({ length: 30 }, (_, col) => tileFace(opts, { col, row: 0 }, key)).join()
-    expect(deal(11)).not.toBe(deal(12))
+    expect(deal({ view: { x: 0, y: 0 }, localKey: 11 })).not.toBe(deal({ view: { x: 0, y: 0 }, localKey: 12 }))
+  })
+
+  it('gives each output of a span its own part of the patch, not a copy', () => {
+    // Tiles start at each output's own origin; the outputs differ only in where they sit.
+    expect(deal({ view: { x: 0, y: 0 }, localKey: 0 })).not.toBe(deal({ view: { x: 1920, y: 0 }, localKey: 0 }))
   })
 })
 

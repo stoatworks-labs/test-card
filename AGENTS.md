@@ -231,10 +231,17 @@ pixel) and forking depth, and fills it in one go. Every polygon is wound the sam
 (`wound`), because one nonzero fill of overlapping subpaths wound opposite ways punches holes
 where they cross. Anything that changes a tree's shape must be in the key.
 
-**The dead walk one lap per loop, and a lap is not the world.** `walkLap` is the world's width on
-an ordinary output but a whole fraction of it on a wide span, or a six-projector surface would have
-the zombies sprinting. Strides are fitted to the lap like the dinosaurs' are, and a zombie's lurch
-is periodic in its stride, so it still does exactly one lap.
+**Anything that crosses a Halloween scene does one lap per loop, and a lap is not the world.**
+`walkLap` is the world's width up to about one and a half 16:9 screens, and 1.3 screens beyond
+that, for the walkers, witches, vampires and bats alike: crossing a six-projector span once per loop
+is a sprint. It is deliberately not a whole number of outputs (a lap of exactly one output width
+gave every output the same six zombies in the same poses). Strides are fitted to the lap like the
+dinosaurs' are, and a zombie's lurch is periodic in its stride, so it still does exactly one lap.
+
+**Per-tile things on a span are keyed on where the tile is, not its column.** LED tiles start again
+at each output's origin, so a pumpkin keyed on `(col, row)` gave every output of a span the same
+patch, flickering in step (review, 2026-10-21). `tileKey` hashes the tile's surface position, as
+the broken wall's `assignFaults` does.
 
 **Vite caches a dynamically imported module across edits.** Driving the encoder
 from the browser console with `await import('/src/lib/video.ts')` keeps handing
@@ -255,7 +262,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 281 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 292 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with
@@ -274,6 +281,13 @@ hand-written:
 
 If you change an importer, regenerate the fixture from the sibling project rather
 than editing the XML by hand.
+
+`test/recording-context.ts` is a pretend 2D context that records every fill,
+stroke and text in device space, with the transform and save/restore stack kept
+as a canvas keeps them. `halloween.paint.test.ts` uses it to check that the
+painters draw the same at the end of the loop as at the start, the same on each
+output of a span as on the whole surface, and leave the context as they found
+it. It doesn't rasterise: a match means the same geometry, not the same pixels.
 
 ## Not doing, on purpose
 

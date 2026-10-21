@@ -10,6 +10,7 @@
  */
 
 import type { PatternSettings } from '../types'
+import { PUMPKIN_FACES } from './art/halloween'
 
 /** Anything `drawImage` accepts that also knows its own size. */
 export type PatternImage = CanvasImageSource & { width: number; height: number }
@@ -84,7 +85,8 @@ const MOVING: ReadonlySet<PatternSettings['kind']> = new Set([
 function moves(kind: PatternSettings['kind'], settings: PatternSettings): boolean {
   if (kind === 'pumpkins') {
     const p = settings.pumpkins
-    return p.faces.length > 0 && (p.flicker || p.expressions)
+    // Only faces it knows: a stored list of names it doesn't would draw plain, still pumpkins.
+    return p.faces.some((f) => PUMPKIN_FACES.includes(f)) && (p.flicker || p.expressions)
   }
   return MOVING.has(kind)
 }

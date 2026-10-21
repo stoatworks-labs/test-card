@@ -228,7 +228,9 @@ for the invariants and the traps.
   at 25, 29.97 and 30 fps, for 7 s and 10 s loops. Each exported at 3840 × 2160 through the app
   came out as 300 frames, 10.000 s, H.264 High, BT.709 limited, and the step from the last frame
   back to the first is inside the range of every other step in the file. The tests hold the
-  walkers' feet on the ground through every stride and every face inside its pumpkin.
+  walkers' feet on the ground through every stride and every face inside its pumpkin, and run the
+  painters through a recording context to check the wrap, the span and the canvas state. A review
+  before landing found that a spanned pumpkin patch was the same patch on every output; fixed.
 - **In Resolume:** Arena 7.28.1 (macOS 26.4.1) opened ocean, scroll and hamster loops at
   1920 × 1080 and an ocean at 3840 × 2160, all at 30 fps and exactly 10 s. Its output snapshot of
   frame 0 matched a BT.709 limited-range decode with a mean error of 0.90 code values at 1080p and

@@ -224,5 +224,19 @@ local receiver rather than screenshotted, since a hidden pane's screenshots lag)
 - Render time once the trees are cached: 4–15 ms a frame for the forest at
   1080p, 60–100 ms for the house's first frame.
 
+An independent review, which ran the painters through a recording context
+(now `test/recording-context.ts`), found one real bug: on a span every output
+got the same pumpkin patch, flickering in step, because LED tiles restart at
+each output's origin and the pumpkins were keyed on column and row. They are
+keyed on surface position now, and two tests fail without that. Also fixed from
+it: the tree cache was capped below what a 7680 x 64 forest needs and rebuilt
+1,600 paths a frame (the cap now follows the last frame); on a wide span the
+walkers were clones in the same place on every output and the flyers crossed
+the whole span per loop (both now go round `walkLap`, 1.3 screens); a portrait
+output cut the house off at both ends (now held to the width); a stored face
+list of unknown names claimed to move; the mist's sample step didn't divide its
+period, so its wrap cut it a few pixels differently. The review also asked for
+painter-level tests, which `halloween.paint.test.ts` now is.
+
 Not run: Resolume, a real wall, other browsers, a tiled (8K) Halloween loop.
 
