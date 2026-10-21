@@ -11,9 +11,11 @@
  *
  *  - Every square in both rows, black black and white white: full range all
  *    the way (or limited at both ends, which also works).
- *  - The squares up to 16 gone into the black and those above 235 into the
- *    white: CRUSHED. The receiving end expects limited range and is stretching
- *    16-235 out to 0-255, so everything outside it clips.
+ *  - The squares from 16 down gone into the black, and from 235 up into the
+ *    white: CRUSHED. Something is stretching 16-235 out to 0-255, so 16 lands on
+ *    0, 235 on 255, and everything beyond clips. Usually the receiving end
+ *    expecting limited range; also a player that decodes a full-range file as
+ *    limited, or a converter set to expand.
  *  - Every square still there, but the black is grey and the white dull: WASHED
  *    OUT. The sending end has squashed it into 16-235 and nothing stretches it
  *    back. Squares can't vanish in this case, so it's the one you judge by eye.
@@ -60,9 +62,11 @@ export function levelsLayout(w: number, h: number): LevelsLayout {
   const row = (codes: number[], y: number): Square[] =>
     codes.map((code, i) => ({ x: x0 + i * (square + gap), y, width: square, height: square, code }))
   const label = Math.max(1, Math.round(square * 0.3))
-  // Each row sits in the middle of its field, with room under it for the labels.
-  const blackY = Math.round((top - square - label * 1.6) / 2)
-  const whiteY = bottom + Math.round((h - bottom - square - label * 1.6) / 2)
+  // Each row sits next to the grey band, near the middle of the picture: the corners are where
+  // the burn-in goes, and on a default output its plate covered the darkest squares.
+  const margin = Math.round(square * 0.25)
+  const blackY = top - margin - Math.round(label * 1.6) - square
+  const whiteY = bottom + margin
   return {
     blackField: { x: 0, y: 0, width: w, height: top },
     whiteField: { x: 0, y: bottom, width: w, height: h - bottom },
@@ -76,7 +80,7 @@ export function levelsLayout(w: number, h: number): LevelsLayout {
 
 const NOTES = [
   'Every square in both rows, black is black and white is white: full range end to end.',
-  'Squares up to 16 gone black and above 235 gone white: CRUSHED. The receiving end expects limited and is stretching it. Set its input to full, or the sender to limited.',
+  'Squares 16 and below gone black, 235 and above gone white: CRUSHED. Usually the receiving end expects limited and is stretching it. Set its input to full, or the sender to limited.',
   'Every square there but black is grey and white is dull: WASHED OUT. The sending end is squashing to limited. Set its output to full, or the receiver to limited.',
   'Which box? Look at this on a monitor partway along the chain: the fault is between the last place it looks right and the first place it looks wrong.',
 ]

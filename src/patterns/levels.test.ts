@@ -29,6 +29,21 @@ describe('the levels check', () => {
     }
   })
 
+  it.each(SIZES)('sits both rows against the grey band, away from the corners where the burn-in goes, at %ix%i', (w, h) => {
+    const L = levelsLayout(w, h)
+    // Below the black row only its labels and a margin; above the white row only a margin.
+    const gapAbove = L.notes.y - (L.blacks[0]!.y + L.square)
+    expect(gapAbove).toBeGreaterThan(0)
+    expect(gapAbove).toBeLessThanOrEqual(L.label * 1.6 + L.square * 0.25 + 1)
+    expect(L.whites[0]!.y - (L.notes.y + L.notes.height)).toBeLessThanOrEqual(L.square * 0.25 + 1)
+  })
+
+  it('clears the top fifth of an ordinary output, where the default burn-in sits', () => {
+    for (const [w, h] of [[1920, 1080], [3840, 2160], [1280, 1024]] as const) {
+      for (const s of levelsLayout(w, h).blacks) expect(s.y).toBeGreaterThanOrEqual(h * 0.2)
+    }
+  })
+
   it('paints each square the exact code it is labelled with', () => {
     const rec = new RecordingContext()
     drawLevelsCheck(rec.ctx, 1920, 1080, { notes: true })
@@ -38,7 +53,7 @@ describe('the levels check', () => {
     for (const code of [...BLACK_LADDER, ...WHITE_LADDER]) expect(labels).toContain(String(code))
   })
 
-  it.each(SIZES)('leaves the context as it found it at %ix%i', (w, h) => {
+  it.each(SIZES)('balances its saves and asks for nothing a canvas would refuse at %ix%i', (w, h) => {
     for (const notes of [true, false]) {
       const rec = new RecordingContext()
       drawLevelsCheck(rec.ctx, w, h, { notes })

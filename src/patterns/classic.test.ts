@@ -71,6 +71,55 @@ describe('the classic card layout', () => {
   })
 })
 
+describe('the classic card, as the review found it', () => {
+  it.each([[1080, 1920], [600, 1920], [192, 1080], [1160, 1080], [1152, 1024], [1200, 1080], [1920, 1080]])(
+    'keeps the circle and the checkers clear of the side castellations at %ix%i',
+    (w, h) => {
+      const L = classicLayout(w, h)
+      const t = L.castellations.find((c) => c.x === 0 && c.y > 0)!.width
+      const stroke = Math.max(2, L.line * 2)
+      expect(L.circle.cx - L.circle.r - stroke / 2).toBeGreaterThanOrEqual(t)
+      expect(L.circle.cx + L.circle.r + stroke / 2).toBeLessThanOrEqual(w - t)
+      for (const c of L.checkers) {
+        // The checker's white border is two lines wide.
+        expect(c.x - L.line * 2).toBeGreaterThanOrEqual(t)
+        expect(c.x + c.width + L.line * 2).toBeLessThanOrEqual(w - t)
+      }
+    },
+  )
+
+  it('starts every grating band black and draws only whole white lines, so no two bands run together', () => {
+    // At 64 x 36 a band is narrower than one pair of lines, so there's nothing to check there.
+    for (const [w, h] of SIZES.filter(([, h]) => h >= 360)) {
+      const L = classicLayout(w, h)
+      const rec = new RecordingContext()
+      drawClassicCard(rec.ctx, w, h, DEFAULT_SETTINGS.classic, DEFAULT_SETTINGS.centre, plainEnv(w, h), undefined)
+      const whites = rec.drawn.filter((d) => d.op === 'fillRect' && d.style === '#ffffff')
+      for (const g of L.gratings) {
+        const mine = whites.filter((d) => d.box[1] === g.y && d.box[0] >= g.x && d.box[2] <= g.x + g.width)
+        expect(mine.length).toBeGreaterThan(0)
+        for (const d of mine) expect(d.box[2] - d.box[0]).toBe(g.linePx)
+        expect(Math.min(...mine.map((d) => d.box[0]))).toBe(g.x + g.linePx)
+      }
+    }
+  })
+
+  it('names the output\'s own raster in the ident, even drawn at another size in a composition', () => {
+    const output = { id: 'a', name: 'Slice', widthPx: 1920, heightPx: 1080, rasterSource: 'manual' as const, source: 'manual' as const, regions: [], notes: [], enabled: true }
+    const rec = new RecordingContext()
+    drawClassicCard(rec.ctx, 960, 540, DEFAULT_SETTINGS.classic, DEFAULT_SETTINGS.centre, plainEnv(960, 540), output)
+    expect(rec.drawn.map((d) => d.op)).toContain('text Slice  ·  1920 × 1080')
+  })
+
+  it('says there is no image rather than drawing nothing, for an image with no size', () => {
+    const rec = new RecordingContext()
+    const env = plainEnv(1920, 1080, { image: { width: 0, height: 0 } as unknown as ImageBitmap })
+    drawClassicCard(rec.ctx, 1920, 1080, DEFAULT_SETTINGS.classic, { ...DEFAULT_SETTINGS.centre, content: 'image' }, env, undefined)
+    expect(rec.drawn.map((d) => d.op)).toContain('text No image chosen')
+    expect(rec.drawn.some((d) => d.op === 'drawImage')).toBe(false)
+  })
+})
+
 describe('the centrepiece text', () => {
   const measure = (line: string, size: number) => line.length * size * 0.6
 
@@ -94,7 +143,7 @@ describe('the centrepiece text', () => {
 })
 
 describe('the classic card painter', () => {
-  it.each(SIZES)('leaves the context as it found it at %ix%i, whatever is in the middle', (w, h) => {
+  it.each(SIZES)('balances its saves and leaves the transform and alpha alone at %ix%i, whatever is in the middle', (w, h) => {
     for (const content of ['logo', 'image', 'text'] as const) {
       const rec = new RecordingContext()
       const centre = { ...DEFAULT_SETTINGS.centre, content }

@@ -106,7 +106,8 @@ export function classicLayout(w: number, h: number): ClassicLayout {
     castellations.push({ x: w - t, y: y0, width: t, height: y1 - y0, black: b.black })
   }
 
-  const r = Math.round(Math.min(h * 0.42, w * 0.46))
+  // From the height, unless the picture is too narrow: then clear of the side castellations and their stroke.
+  const r = Math.max(1, Math.round(Math.min(h * 0.42, w * 0.46, w / 2 - t - line * 4)))
   const X = (f: number) => Math.round(cx + f * r)
   const Y = (f: number) => Math.round(cy + f * r)
   const span = (x0: number, x1: number, y0: number, y1: number): Rect => ({ x: x0, y: y0, width: x1 - x0, height: y1 - y0 })
@@ -132,14 +133,15 @@ export function classicLayout(w: number, h: number): ClassicLayout {
     { cx: w - inset, cy: h - inset, r: rc },
   ].filter((c) => w >= cell * 5 && Math.hypot(c.cx - cx, c.cy - cy) > r + rc + cell * 0.25)
 
-  // Pixel checkers in the middle of the space either side of the circle, if there is a cell's worth.
-  const side = cx - r
+  // Pixel checkers in the middle of the space between the castellations and the circle, if a
+  // checker, its white border and a margin fit there.
+  const side = cx - r - t
   const size = Math.round(cell)
   const checkers =
-    side >= cell * 1.4
+    side >= size + line * 4 + cell * 0.3
       ? [
-          { x: Math.round(side / 2 - size / 2), y: Math.round(cy - size / 2), width: size, height: size, cellPx: 1 },
-          { x: w - Math.round(side / 2 + size / 2), y: Math.round(cy - size / 2), width: size, height: size, cellPx: 2 },
+          { x: Math.round(t + (side - size) / 2), y: Math.round(cy - size / 2), width: size, height: size, cellPx: 1 },
+          { x: w - Math.round(t + (side + size) / 2), y: Math.round(cy - size / 2), width: size, height: size, cellPx: 2 },
         ]
       : []
 
@@ -208,8 +210,9 @@ export function drawClassicCard(
     ctx.strokeStyle = white
     ctx.stroke()
     ctx.fillStyle = white
-    ctx.fillRect(c.cx - c.r, c.cy - L.line / 2, c.r * 2, L.line)
-    ctx.fillRect(c.cx - L.line / 2, c.cy - c.r, L.line, c.r * 2)
+    // On whole pixels: an odd line width centred on a whole pixel would straddle two rows.
+    ctx.fillRect(Math.round(c.cx - c.r), Math.round(c.cy - L.line / 2), c.r * 2, L.line)
+    ctx.fillRect(Math.round(c.cx - L.line / 2), Math.round(c.cy - c.r), L.line, c.r * 2)
   }
   for (const c of L.checkers) {
     ctx.fillStyle = white
@@ -236,7 +239,8 @@ export function drawClassicCard(
     ctx.fillStyle = black
     ctx.fillRect(g.x, g.y, g.width, g.height)
     ctx.fillStyle = white
-    for (let x = g.x; x < g.x + g.width; x += g.linePx * 2) ctx.fillRect(x, g.y, Math.min(g.linePx, g.x + g.width - x), g.height)
+    // Black first and whole white lines only, so each band is edged in black and never runs into the next.
+    for (let x = g.x + g.linePx; x + g.linePx <= g.x + g.width; x += g.linePx * 2) ctx.fillRect(x, g.y, g.linePx, g.height)
   }
 
   drawCentrepiece(ctx, L.panel, centre, env)
@@ -251,7 +255,9 @@ export function drawClassicCard(
     ctx.fillRect(L.ident.x, L.ident.y, L.ident.width, L.ident.height)
     const name = output?.name?.trim()
     const box = { x: L.ident.x + r * 0.35, y: L.ident.y, width: L.ident.width - r * 0.7, height: L.ident.height }
-    centredText(ctx, name ? `${name}  ·  ${w} × ${h}` : `${w} × ${h}`, box, white)
+    // The output's own raster: in composition mode the card is drawn at the size of its region.
+    const raster = `${output?.widthPx ?? w} × ${output?.heightPx ?? h}`
+    centredText(ctx, name ? `${name}  ·  ${raster}` : raster, box, white)
   }
   ctx.restore()
 

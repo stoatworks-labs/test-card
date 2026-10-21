@@ -56,7 +56,7 @@ describe('the Halloween painters loop with no seam', () => {
   })
 })
 
-describe('the Halloween painters leave the context as they found it', () => {
+describe('the Halloween painters balance their saves and leave the transform and alpha alone', () => {
   const sizes: [number, number][] = [[1920, 1080], [1080, 1920], [64, 36], [7680, 64], [2, 2]]
   it.each(PAINTERS)('%s, at any size, asks for nothing a canvas would refuse', (_name, p) => {
     for (const [w, h] of sizes) {

@@ -58,8 +58,8 @@ draw the imported slice or port outlines on top.
 
 Laid out the way the old broadcast cards were, for the same reasons:
 
-- **The circle** and the four **corner circles** are round when the aspect ratio is right. An
-  egg means something is stretching the picture.
+- **The circle** and the **corner circles** (one in each corner, where there's room) are round
+  when the aspect ratio is right. An egg means something is stretching the picture.
 - **The castellations** run along every edge. Count how many you can see to know how much of
   the picture overscan or a mask is eating.
 - **The gratings** go from 8 px lines down to 1 px. Where they turn to mush is where the
@@ -67,8 +67,8 @@ Laid out the way the old broadcast cards were, for the same reasons:
   anything that scales.
 - **The six steps** run from black to white. Two that look the same at either end mean crushed
   blacks or clipped whites.
-- **The box at the foot** names the output and its raster. Untick **Name the output** to leave it
-  blank.
+- **The box at the foot** names the output and its raster. Untick **Name the output** and the
+  box goes.
 
 **In the middle** is the Stoatworks logo by default. Pick **Your image** to use your own picture
 (the same one the **Your image** pattern uses, kept in this browser and never uploaded), or **Your
@@ -117,7 +117,7 @@ out. It's always drawn in full range, since a media server plays a full-range pi
 | What you see | What it means | What to change |
 |---|---|---|
 | Every square in both rows, black is black, white is white | Full range end to end (or limited at both ends, which works too) | Nothing |
-| The squares below 16 and above 235 have gone | **Crushed.** The receiving end expects limited and is stretching 16–235 out to 0–255, so everything beyond clips | Set the receiver's input to full, or the sender's output to limited |
+| The squares from 16 down and from 235 up have gone, the coloured ones included | **Crushed.** Something is stretching 16–235 out to 0–255, so 16 lands on black, 235 on white and everything beyond clips. Usually the receiving end expecting limited; sometimes a player reading a full-range file as limited, or a converter set to expand | Set the receiver's input to full, or the sender's output to limited |
 | Every square is there, but black is grey and white is dull | **Washed out.** The sending end is squashing to limited, and nothing stretches it back | Set the sender's output to full, or the receiver's input to limited |
 
 Crushed shows itself: squares vanish. Washed out doesn't, because nothing is lost, so judge the
@@ -127,7 +127,8 @@ What one picture can't tell you is which box in a longer chain did it. Look at t
 monitor partway along: a media server's own preview, a processor's monitor out, a scaler's
 loop-through. The fault is between the last place it looks right and the first place it looks
 wrong. **Explain the results on the card** prints the table above on the pattern itself, for the
-person at the other end of the radio.
+person at the other end of the radio. On an output under about 800 pixels wide the notes would be
+too small to read, so they're left off and only the squares are drawn.
 
 ### Scale and novelty
 

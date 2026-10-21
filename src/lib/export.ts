@@ -12,6 +12,7 @@ import { buildZip, uniqueNames, type ZipEntry } from './zip'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
 import { isAnimated, isScaleAware } from '../patterns/env'
+import { canvasRange } from '../patterns/render'
 
 /** Filesystem-safe, lower-case, no runs of separators. */
 export function slug(text: string): string {
@@ -124,7 +125,8 @@ export function buildManifest(
     `Test Card — generated patterns`,
     `Project:  ${projectName}`,
     `Pattern:  ${settings.kind}`,
-    `Levels:   ${settings.levels} range (${settings.levels === 'legal' ? '16-235' : '0-255'})`,
+    // The range the picture is in, which for artwork and the levels check is full whatever the setting says.
+    `Levels:   ${canvasRange(settings)} range (${canvasRange(settings) === 'legal' ? '16-235' : '0-255'})${canvasRange(settings) !== settings.levels ? ', always, for this pattern' : ''}`,
     `Created:  ${new Date().toISOString()}`,
   ]
   if (kind === 'mp4') {

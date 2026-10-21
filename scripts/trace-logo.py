@@ -105,28 +105,64 @@ def trace(mask: np.ndarray, w: int, h: int, shrink: bool, work: Path) -> str:
 
 
 def y_down(d: str, height: int) -> str:
-    """potrace writes y up under a flipping transform; undo it and scale to 1000 high."""
+    """potrace writes y up under a flipping transform; undo it and scale to 1000 high.
+
+    Every point is placed absolutely, rounded to a tenth, and written as the difference
+    from the last ROUNDED point. Rounding each relative step on its own let the error
+    add up along an outline, to 1.4 units by the end of the longest.
+    """
     k = 1000 / height
     tokens = re.findall(r'[MmLlCcZz]|-?\d+(?:\.\d+)?', d)
     out = []
     cmd = ''
+    pen = (0.0, 0.0)        # exact, source units, y up
+    start = (0.0, 0.0)
     i = 0
 
-    def num(v: float) -> str:
-        s = f'{v:.1f}'.rstrip('0').rstrip('.')
+    def tenths(p: tuple) -> tuple:
+        return (round(p[0] * k * 10), round((height - p[1]) * k * 10))
+
+    def num(t: int) -> str:
+        s = f'{t / 10:.1f}'.rstrip('0').rstrip('.')
         return '0' if s in ('', '-0') else s
+
+    def pairs(n: int) -> list:
+        nonlocal i
+        got = []
+        for _ in range(n):
+            got.append((float(tokens[i]), float(tokens[i + 1])))
+            i += 2
+        return got
 
     while i < len(tokens):
         t = tokens[i]
         if t.isalpha():
             cmd = t
-            out.append(t)
             i += 1
+            if t in 'Zz':
+                out.append('z')
+                pen = start
+            elif t == 'M':
+                out.append('M')
+            else:
+                out.append(t)
             continue
-        x, y = float(tokens[i]), float(tokens[i + 1])
-        i += 2
-        # Absolute moves flip about the height; everything else is relative and just negates y.
-        out.append(f'{num(x * k)} {num((height - y) * k) if cmd == "M" else num(-y * k)}')
+        if cmd == 'M':
+            (pen,) = pairs(1)
+            start = pen
+            x, y = tenths(pen)
+            out.append(f'{num(x)} {num(y)}')
+            continue
+        group = 3 if cmd == 'c' else 1
+        rel = pairs(group)
+        base = tenths(pen)
+        pts = [(pen[0] + dx, pen[1] + dy) for dx, dy in rel]
+        for p in pts:
+            x, y = tenths(p)
+            out.append(f'{num(x - base[0])} {num(y - base[1])}')
+        pen = pts[-1]
+        if cmd == 'm':
+            start = pen
     return re.sub(r' -', '-', ' '.join(out))
 
 

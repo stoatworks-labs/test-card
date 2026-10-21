@@ -420,7 +420,7 @@ export function overlayLines(output: Output, settings: PatternSettings): string[
   const lines: string[] = []
   if (opts.showName) lines.push(output.name)
   if (opts.showResolution) lines.push(`${output.widthPx} x ${output.heightPx}`)
-  if (opts.showPattern) lines.push(`${PATTERN_LABELS[settings.kind]} · ${settings.levels} range`)
+  if (opts.showPattern) lines.push(`${PATTERN_LABELS[settings.kind]} · ${canvasRange(settings)} range`)
   if (opts.customText.trim()) lines.push(...opts.customText.split('\n').filter(Boolean))
   return lines
 }

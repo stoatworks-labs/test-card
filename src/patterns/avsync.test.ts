@@ -123,7 +123,7 @@ describe('AV sync picture', () => {
     expect(far).toHaveLength(0)
   })
 
-  it.each([[1920, 1080], [1080, 1920], [3840, 1080], [64, 36]])('leaves the context as it found it at %ix%i', (w, h) => {
+  it.each([[1920, 1080], [1080, 1920], [3840, 1080], [64, 36]])('balances its saves and asks for nothing a canvas would refuse at %ix%i', (w, h) => {
     const rec = draw(syncs[0]!, w, h)
     expect(rec.bad).toEqual([])
     expect(rec.stack).toHaveLength(0)

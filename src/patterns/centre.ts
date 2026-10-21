@@ -62,11 +62,12 @@ export function drawCentrepiece(ctx: Ctx, rect: Rect, opts: CentreOptions, env: 
   const pad = Math.min(rect.width, rect.height) * 0.08
   const inner = { x: rect.x + pad, y: rect.y + pad, w: rect.width - pad * 2, h: rect.height - pad * 2 }
 
-  if (opts.content === 'image' && env.image) {
-    const p = imagePlacement(env.image.width, env.image.height, inner.w, inner.h, 'contain', 'centre', 'centre')
+  const image = env.image && env.image.width > 0 && env.image.height > 0 ? env.image : null
+  if (opts.content === 'image' && image) {
+    const p = imagePlacement(image.width, image.height, inner.w, inner.h, 'contain', 'centre', 'centre')
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(env.image, inner.x + p.dx, inner.y + p.dy, p.dw, p.dh)
+    ctx.drawImage(image, inner.x + p.dx, inner.y + p.dy, p.dw, p.dh)
   } else if (opts.content === 'logo') {
     const k = Math.min(inner.w / LOGO_WIDTH, inner.h / LOGO_HEIGHT)
     ctx.translate(rect.x + (rect.width - LOGO_WIDTH * k) / 2, rect.y + (rect.height - LOGO_HEIGHT * k) / 2)

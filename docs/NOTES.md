@@ -285,6 +285,21 @@ and 235 picked out, always full range.
 Not run: a real chain with each mismatch. That's the obvious next check, with a
 GPU set to limited RGB into a monitor set to full and the other way round.
 
+An independent review of the card and the levels check (both commits) found
+nothing that crashes or breaks an invariant, and confirmed the checkers and
+steps pixel-exact, the logo regenerating byte for byte, and the levels logic
+under three rounding modes. It found, all fixed: the default burn-in's plate
+covered the darkest squares (the rows now sit against the grey band); grating
+bands ran into each other where one ended on a white line (each now starts
+black and draws only whole lines); the corner cross-hairs sat on half pixels;
+checkers and, in portrait, the circle ran into the side castellations; the
+ident gave the composition region's size, not the raster's; a zero-sized image
+drew nothing instead of "No image chosen"; the burn-in and the ZIP manifest
+gave the level setting rather than the range drawn; the logo's relative
+coordinates were rounded one by one, so outlines missed closing by up to 1.4
+units (now 0). And the docs said squares "below 16" vanish, when 16 and 235
+go too.
+
 ## 2026-10-21 — AV sync, and sound in the MP4
 
 Allan asked for "an av sync test pattern, again ideally with the stoatworks logo
