@@ -137,6 +137,8 @@ export type PatternKind =
   | 'pumpkins'
   | 'spooky-forest'
   | 'haunted-house'
+  // Classic and technical.
+  | 'classic-card'
 
 /**
  * Output level range.
@@ -355,6 +357,24 @@ export type SceneOptions = {
   speed: number
 }
 
+/** What goes in the middle of the classic card (and the AV sync pattern). */
+export type CentreOptions = {
+  content: 'logo' | 'image' | 'text'
+  /** One line per line, when the content is text. */
+  text: string
+  /** Behind the logo, the image or the text. */
+  background: string
+  /** The text's colour. */
+  colour: string
+}
+
+export type ClassicCardOptions = {
+  /** Colour bar amplitude: 75% bars, or 100%. */
+  barsPct: 75 | 100
+  /** Name the output and its raster in the box at the foot of the circle. */
+  ident: boolean
+}
+
 export type PumpkinFace = 'classic' | 'fierce' | 'happy' | 'surprised' | 'sly' | 'goofy'
 
 export type PumpkinOptions = {
@@ -454,6 +474,8 @@ export type PatternSettings = {
   dinosaurs: DinosaurOptions
   hamsters: HamsterOptions
   pumpkins: PumpkinOptions
+  centre: CentreOptions
+  classic: ClassicCardOptions
   ocean: OceanOptions
   scene: SceneOptions
   broken: BrokenWallOptions

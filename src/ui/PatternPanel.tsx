@@ -5,6 +5,8 @@ import type { ImageInfo } from '../state/store'
 import {
   BananaControls,
   BrokenControls,
+  CentreControls,
+  ClassicControls,
   DinosaurControls,
   HamsterControls,
   ImageControls,
@@ -46,6 +48,7 @@ const KINDS: { kind: PatternKind; hint: string }[] = [
   { kind: 'solid', hint: 'Flat colour field for dead pixels' },
   { kind: 'greyscale', hint: 'Ramp or stepped wedge' },
   { kind: 'pixel-check', hint: '1px checker and line bursts' },
+  { kind: 'classic-card', hint: 'Grid, castellations, a circle with your logo' },
 ]
 
 export function PatternPanel({
@@ -110,6 +113,10 @@ export function PatternPanel({
       {kind === 'hamsters' ? <HamsterControls opts={settings.hamsters} patch={sub('hamsters')} /> : null}
       {kind === 'ocean' ? <OceanControls opts={settings.ocean} patch={sub('ocean')} /> : null}
       {kind === 'pumpkins' ? <PumpkinControls opts={settings.pumpkins} patch={sub('pumpkins')} /> : null}
+      {kind === 'classic-card' ? <ClassicControls opts={settings.classic} patch={sub('classic')} /> : null}
+      {kind === 'classic-card' ? (
+        <CentreControls opts={settings.centre} patch={sub('centre')} image={image} onImage={onImage} />
+      ) : null}
       {kind === 'dino-scroll' || kind === 'volcano' || kind === 'spooky-forest' || kind === 'haunted-house' ? (
         <SceneControls kind={kind} opts={settings.scene} patch={sub('scene')} />
       ) : null}

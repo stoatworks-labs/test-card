@@ -58,7 +58,7 @@ function line(ctx: Ctx, x1: number, y1: number, x2: number, y2: number, lw: numb
 // Colour bars
 // ---------------------------------------------------------------------------
 
-function paintBands(ctx: Ctx, bands: Band[], range: LevelRange) {
+export function paintBands(ctx: Ctx, bands: Band[], range: LevelRange) {
   for (const band of bands) {
     if (band.fill.kind === 'flat') {
       const { y, cb, cr } = band.fill.colour
@@ -276,7 +276,7 @@ export function drawAlignment(ctx: Ctx, w: number, h: number, opts: AlignmentOpt
   }
 }
 
-function drawChecker(
+export function drawChecker(
   ctx: Ctx,
   x: number,
   y: number,

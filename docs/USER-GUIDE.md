@@ -45,9 +45,36 @@ nothing is uploaded.
 | **Solid field** | Flat colour at a chosen level, for dead pixels and uniformity. |
 | **Greyscale** | Continuous ramp or stepped wedge, optionally split into R, G, B and neutral. |
 | **Pixel check** | 1px checkerboard and line bursts. **If it renders as flat grey on the real output, something in the chain is scaling.** |
+| **Classic test card** | A grey grid, castellated edges and a big circle holding colour bars, gratings from 8 px down to 1 px, a picture panel, six greyscale steps and the output's name. See below. |
 
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
 draw the imported slice or port outlines on top.
+
+### The classic test card
+
+![The classic test card on a 1920 × 1080 output](screenshots/classic-card.png)
+
+Laid out the way the old broadcast cards were, for the same reasons:
+
+- **The circle** and the four **corner circles** are round when the aspect ratio is right. An
+  egg means something is stretching the picture.
+- **The castellations** run along every edge. Count how many you can see to know how much of
+  the picture overscan or a mask is eating.
+- **The gratings** go from 8 px lines down to 1 px. Where they turn to mush is where the
+  resolution runs out; the 1 px one (and the **checker** on the left) goes flat grey through
+  anything that scales.
+- **The six steps** run from black to white. Two that look the same at either end mean crushed
+  blacks or clipped whites.
+- **The box at the foot** names the output and its raster. Untick **Name the output** to leave it
+  blank.
+
+**In the middle** is the Stoatworks logo by default. Pick **Your image** to use your own picture
+(the same one the **Your image** pattern uses, kept in this browser and never uploaded), or **Your
+text** for a line or two of your own: the venue, the screen, the show. The text is sized to fill
+the panel. Set the panel's **Background**, and the text's colour.
+
+The card is always drawn in full range, whatever the level setting says. For checking levels, use
+the bars, the greyscale, or the **levels check**.
 
 ### Scale and novelty
 

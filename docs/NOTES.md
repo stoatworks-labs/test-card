@@ -240,3 +240,27 @@ painter-level tests, which `halloween.paint.test.ts` now is.
 
 Not run: Resolume, a real wall, other browsers, a tiled (8K) Halloween loop.
 
+## 2026-10-21 — classic test card
+
+Allan asked for a "Test Card F style" pattern with the Stoatworks logo, an
+image of your own or your own text in the middle instead of the picture of the
+girl. That picture (and the card) are the BBC's, so this borrows the furniture
+of the tradition rather than the card: grey grid, castellations, a big circle,
+colour bars, gratings, greyscale steps, corner circles, pixel checkers, an
+ident box. Named "Classic test card".
+
+- The centrepiece (`centre.ts`) is shared settings (`settings.centre`) so the
+  AV sync pattern can use it too. "Your image" is the same image as the Your
+  image pattern; with none chosen it says "No image chosen" rather than
+  showing a blank panel.
+- The logo is traced to vector (`scripts/trace-logo.py`, see AGENTS.md): the
+  biggest brand raster is 400 x 310. The website's 207 px marks were smaller.
+- Always full range: it is a card, not a level reference.
+- The bars started out the full width of the circle, which clipped the white
+  and black bars down to nothing; they're in line with the gratings now, and
+  the circle only takes the outer bars' top corners.
+
+Run in Chrome 152: 1920 x 1080, 3840 x 2160, 1080 x 1920, 3840 x 1080,
+1280 x 1024, 640 x 360 and 64 x 36, with the logo, text, an image and no image.
+14 ms to render at 1080p. Not run: a real display or projector.
+

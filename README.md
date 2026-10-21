@@ -41,6 +41,7 @@ don't fit, a hamster on every LED tile, and a few moving scenes that export as s
 | **Solid field** | Flat colour at a chosen level, for dead pixels and uniformity |
 | **Greyscale** | Continuous ramp or stepped wedge, optionally split into R, G, B and neutral |
 | **Pixel check** | 1px checkerboard and line bursts. If it renders as flat grey on the real output, something in the chain is scaling |
+| **Classic test card** | A grey grid with castellated edges and a big circle, in the old broadcast tradition: colour bars, gratings from 8 px lines down to 1 px, six greyscale steps, corner circles and pixel checkers, and the output's name at the foot. Where the famous cards had a photograph, this has the Stoatworks logo, your own picture or your own words |
 
 ### Scale and novelty
 
@@ -76,6 +77,10 @@ For the one week a year the LED wall is expected to be festive.
 
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
 draw the imported slice or port outlines on top.
+
+![The classic test card on a 1920 × 1080 output: grey grid, castellated edges, colour bars, gratings, the Stoatworks stoat in the middle, greyscale steps and the output's name](docs/screenshots/classic-card.png)
+
+<sub>The classic test card. The picture in the middle of the cards I grew up with belongs to someone else, so this one has a stoat.</sub>
 
 ## Physical scale
 

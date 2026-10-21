@@ -33,6 +33,7 @@ import { isAnimated, plainEnv, type PaintEnv, type PatternImage } from './env'
 import { drawBananas, drawDinosaurs, drawHamsters, drawRulers } from './novelty'
 import { drawDinoScroll, drawOcean, drawVolcano } from './scenes'
 import { drawHauntedHouse, drawPumpkins, drawSpookyForest } from './halloween'
+import { drawClassicCard } from './classic'
 import { drawBrokenWall } from './broken'
 import { drawImagePattern } from './image'
 import { loopTiming } from './loop'
@@ -139,6 +140,9 @@ export function paintPattern(
       break
     case 'haunted-house':
       drawHauntedHouse(ctx, w, h, settings.scene, env)
+      break
+    case 'classic-card':
+      drawClassicCard(ctx, w, h, settings.classic, settings.centre, env, output)
       break
     case 'broken-wall': {
       const base: PatternSettings = { ...settings, kind: settings.broken.base }
@@ -424,6 +428,7 @@ export const PATTERN_LABELS: Record<PatternSettings['kind'], string> = {
   pumpkins: 'Pumpkin patch',
   'spooky-forest': 'Spooky forest',
   'haunted-house': 'Haunted house',
+  'classic-card': 'Classic test card',
 }
 
 /**

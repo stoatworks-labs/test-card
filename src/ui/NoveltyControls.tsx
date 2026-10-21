@@ -350,6 +350,61 @@ export function PumpkinControls({ opts, patch }: { opts: PatternSettings['pumpki
   )
 }
 
+export function ClassicControls({ opts, patch }: { opts: PatternSettings['classic']; patch: Patch }) {
+  return (
+    <>
+      <h3>Classic test card</h3>
+      <Field label="Colour bars">
+        <select value={opts.barsPct} onChange={(e) => patch({ barsPct: Number(e.target.value) })}>
+          <option value={75}>75%</option>
+          <option value={100}>100%</option>
+        </select>
+      </Field>
+      <Check label="Name the output at the foot of the circle" checked={opts.ident} onChange={(ident) => patch({ ident })} />
+      <p className="hint">
+        Always drawn in full range. For checking levels, use the bars, the greyscale or{' '}
+        the levels check.
+      </p>
+    </>
+  )
+}
+
+/** What goes in the middle: the logo, your picture, or your words. */
+export function CentreControls({
+  opts,
+  patch,
+  image,
+  onImage,
+}: {
+  opts: PatternSettings['centre']
+  patch: Patch
+  image: ImageInfo | null
+  onImage: (info: Omit<ImageInfo, 'version'> | null) => void
+}) {
+  return (
+    <>
+      <h3>In the middle</h3>
+      <Field label="Show">
+        <select value={opts.content} onChange={(e) => patch({ content: e.target.value })}>
+          <option value="logo">The Stoatworks logo</option>
+          <option value="image">Your image</option>
+          <option value="text">Your text</option>
+        </select>
+      </Field>
+      {opts.content === 'image' ? <ImagePicker image={image} onImage={onImage} /> : null}
+      {opts.content === 'text' ? (
+        <Field label="Text (one line per line)">
+          <textarea rows={3} value={opts.text} onChange={(e) => patch({ text: e.target.value })} />
+        </Field>
+      ) : null}
+      <div className="row">
+        <Colour label="Background" value={opts.background} onChange={(background) => patch({ background })} />
+        {opts.content === 'text' ? <Colour label="Text" value={opts.colour} onChange={(colour) => patch({ colour })} /> : null}
+      </div>
+    </>
+  )
+}
+
 const BASES: Exclude<PatternKind, 'broken-wall'>[] = [
   'ocean',
   'dino-scroll',
@@ -357,6 +412,7 @@ const BASES: Exclude<PatternKind, 'broken-wall'>[] = [
   'spooky-forest',
   'haunted-house',
   'pumpkins',
+  'classic-card',
   'image',
   'smpte-rp219',
   'ebu-bars',
@@ -405,14 +461,11 @@ export function BrokenControls({ opts, patch }: { opts: PatternSettings['broken'
   )
 }
 
-export function ImageControls({
-  opts,
-  patch,
+/** Choose, replace or remove the picture the image pattern and the classic card's centre share. */
+export function ImagePicker({
   image,
   onImage,
 }: {
-  opts: PatternSettings['image']
-  patch: Patch
   image: ImageInfo | null
   onImage: (info: Omit<ImageInfo, 'version'> | null) => void
 }) {
@@ -434,7 +487,6 @@ export function ImageControls({
 
   return (
     <>
-      <h3>Your image</h3>
       <input
         ref={input}
         type="file"
@@ -469,6 +521,25 @@ export function ImageControls({
         </p>
       ) : null}
       {error ? <p className="hint warn">{error}</p> : null}
+    </>
+  )
+}
+
+export function ImageControls({
+  opts,
+  patch,
+  image,
+  onImage,
+}: {
+  opts: PatternSettings['image']
+  patch: Patch
+  image: ImageInfo | null
+  onImage: (info: Omit<ImageInfo, 'version'> | null) => void
+}) {
+  return (
+    <>
+      <h3>Your image</h3>
+      <ImagePicker image={image} onImage={onImage} />
       <Field label="Fit">
         <select value={opts.fit} onChange={(e) => patch({ fit: e.target.value })}>
           <option value="contain">Fit inside (letterbox)</option>

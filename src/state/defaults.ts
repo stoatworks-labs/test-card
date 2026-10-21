@@ -101,6 +101,10 @@ export const DEFAULT_SETTINGS: PatternSettings = {
 
   pumpkins: { seed: 1, faces: [...PUMPKIN_FACES], flicker: true, expressions: true },
 
+  centre: { content: 'logo', text: 'TEST CARD', background: '#f4f1ea', colour: '#111111' },
+
+  classic: { barsPct: 75, ident: true },
+
   ocean: { seed: 1, time: 'sunset', swell: 1 },
 
   scene: { seed: 1, speed: 3 },
