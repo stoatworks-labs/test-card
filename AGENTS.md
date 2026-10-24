@@ -57,6 +57,14 @@ src/lib/video.ts      WebCodecs encode loop, the RGB -> Y′CbCr 4:2:0 conversio
                       tile planner for rasters the encoder won't take whole
 src/import/*.ts       one file per source format + detect.ts to sniff
 src/state/            zustand store, persisted to localStorage
+src/live/plan.ts      live output's pure parts: URL, placement, default display→source
+src/live/clock.ts     the wall clock every live window agrees on (see trap below)
+src/live/screens.ts   the Window Management API (display list), typed here because TS isn't yet
+src/live/channel.ts   the BroadcastChannel protocol between the editor and its live windows
+src/live/supervise.ts the editor's list of live windows that have reported in
+src/live/sound.ts     a live window's AV sync sound, a pass at a time on the computer's clock
+src/ui/LiveView.tsx   a live window: the same page at /?live=…, mounted instead of App
+src/ui/LivePanel.tsx  the editor's Live output panel
 src/ui/               React
 ```
 
@@ -146,7 +154,55 @@ the output that drives them and start at its own origin. An output whose
 composition region has a different aspect from its raster is not spanned at
 all (`spanPlace`); on a stretched mapping nothing is life-size both ways.
 
+**12. A live window reads the editor's state and never writes it.**
+Live windows (`/?live=…`, `LiveView`) are pages of their own, opened `noopener`.
+They take outputs and settings from the localStorage the editor already writes
+(`followSavedState`) and the picture from IndexedDB (`onImageChanged`), and
+draw through `renderOutputTo` / `renderCompositionTo` like the preview (rule 5).
+They must not call a store action that persists: a live window holding an old
+copy would write it back over the editor's. What one shows and how it scales
+live in its URL, so a reload of the window comes back the same; the editor
+steers them only over `channel.ts`. "1:1" is only claimed when the canvas, sized
+in device pixels from `devicePixelContentBoxSize`, is the raster's size.
+
 ## Traps that have already cost time
+
+**A page gets one pop-up per click, and full screen only from a click in that
+window.** Chrome consumes the click's activation on the first `window.open`, so
+"Go live" on three displays opens one window; the panel reports the others as
+not opened after `GONE_MS` and the next click opens the next. With `noopener`
+`window.open` returns null either way, so a window is only known to have opened
+when it reports in. `requestFullscreen` checks activation on the element's own
+frame, so the editor can't do it for a window; the live window's own click does.
+The "fullscreen popup" origin trial that would have fixed both was dropped.
+
+**The display list needs Chromium, a secure context and a permission.**
+`getScreenDetails` is absent on plain http, which is how the desktop launcher's
+copy is reached from another machine; the panel falls back to "Open a live
+window" and drag. The app's own browser pane (Electron) refuses the permission
+and opens `window.open` in the same tab, so it can test a live window but not
+placement: use `scripts/live-check.mjs`, which runs headless Chrome with
+`--screen-info` pretend displays. `--screen-info` sizes are device pixels.
+
+**A cut-short live-check leaves its Chrome running on port 9333**, and the next
+run would talk to it, with the old displays. The script refuses to start if the
+port answers; kill the old one (its profile is in the temp folder).
+
+**`performance.timeOrigin` is not a shared clock.** Each renderer process fixes
+its own wall-clock anchor, and a Mac's monotonic clock stops while it sleeps, so
+two live windows opened either side of a sleep (or a clock step) disagree by
+that long. Live windows time everything with `unixMs()` from `clock.ts`:
+`performance.now()` plus an offset to `Date.now()` re-taken every second.
+
+**A `bye` posted from `pagehide` after `window.close()` gets lost.** A window
+asked to close says goodbye first, then closes. One closed by hand does get its
+`pagehide` goodbye through (live-check tests both).
+
+**Live colour is managed, the files' isn't.** The browser and the OS colour-manage
+the canvas to the display's profile, so live code values on the cable needn't be
+the PNG's. Not measured; the guide sends level checks to the files.
+
+
 
 **ffmpeg's `rgb24` output uses the wrong matrix.** `smptehdbars -pix_fmt rgb24`
 converts HD content with BT.601 and renders 75% yellow as (189, 202, 7) instead
@@ -295,7 +351,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 427 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 454 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with

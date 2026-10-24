@@ -531,3 +531,183 @@ footer {
 footer span {
   flex: 1;
 }
+
+/* --- live output -------------------------------------------------------- */
+
+button.active-outline {
+  border-color: var(--accent);
+}
+
+.live-panel {
+  margin-bottom: 12px;
+}
+
+.live-head,
+.live-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.live-head h2 {
+  margin: 0;
+}
+
+.live-screens,
+.live-windows {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-screens li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  gap: 8px 12px;
+  align-items: center;
+}
+
+@media (max-width: 700px) {
+  .live-screens li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.live-screens .check {
+  margin: 0;
+}
+
+.live-windows li {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+}
+
+.live-windows select {
+  width: auto;
+  max-width: 320px;
+}
+
+.live-windows .hint {
+  margin: 4px 0 0;
+}
+
+.dim {
+  color: var(--dim);
+}
+
+.live-badge {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--error);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.live-here {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.live-here .field {
+  margin: 0;
+  flex: 1 1 260px;
+}
+
+.live-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* The live window itself: nothing on the display but the pattern. The About
+   dialog and the support footer are added to <body> by scripts the page
+   always loads, so everything beside the app's own root is hidden. */
+
+html.live,
+html.live body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+html.live body > :not(#root) {
+  display: none !important;
+}
+
+.live-view {
+  position: fixed;
+  inset: 0;
+}
+
+.live-view.no-cursor {
+  cursor: none;
+}
+
+.live-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* The canvas is sized to the window in device pixels, so nothing should
+     resample it; if a browser ever does, this keeps 1px lines 1px. */
+  image-rendering: pixelated;
+}
+
+.live-info {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  max-width: min(720px, calc(100% - 32px));
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(13, 17, 23, 0.88);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font: 12px/1.6 ui-monospace, Menlo, monospace;
+  pointer-events: none;
+}
+
+.live-title {
+  font-size: 14px;
+}
+
+.live-title b {
+  color: var(--error);
+  margin-right: 6px;
+}
+
+.live-keys {
+  color: var(--dim);
+}
+
+.live-info .warn {
+  color: var(--warn);
+}
+
+.live-problem {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  color: var(--text);
+  font-size: 20px;
+  text-align: center;
+  pointer-events: none;
+}

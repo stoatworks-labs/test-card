@@ -352,3 +352,64 @@ encoder will prime differently; that's what the measurement is for). A hunch
 from the review, unchecked: Windows Media Foundation might ignore the edit
 list's start, which would put the sound 44 ms late there.
 
+## 2026-10-24 — live output
+
+Allan asked for a "live output" mode: a button that puts the pattern full screen,
+live, on displays he picks. Built as a panel in the editor plus live windows that
+are the same page at `/?live=…` (offline from the same cached shell), opened
+`noopener` over each display with the Window Management API's coordinates.
+
+Why pages of their own rather than about:blank popups the editor draws into: a
+live window then survives the editor tab being reloaded, discarded or closed, a
+reload of the window itself comes back the same (source and scaling are in its
+URL), and several moving windows aren't all drawn on the editor's one thread.
+The cost is a protocol: state through localStorage `storage` events, the picture
+through a BroadcastChannel after IndexedDB has it, status and commands over a
+second channel.
+
+What the browser won't do: more than one `window.open` per click (so a click
+per display unless pop-ups are allowed), and full screen without a click in that
+window. Chrome's fullscreen-popup origin trial (119–122) would have done both
+from one click; it was dropped in March 2024 for "fullscreen without a gesture",
+which is only for isolated web apps and enterprise policy.
+
+Sound for AV sync: one window (the first opened) plays the loop. A looping
+buffer would drift with the audio device's clock, so each pass is started
+separately at the computer's-clock time of its start, mapped through
+`getOutputTimestamp`; the seam is in AV sync's quiet half second. Tested against
+a pretend device 80 ppm fast: every pass within 0.2 ms. Not measured: what the
+browser adds to the picture or the sound on the way out.
+
+Verified: in the app's browser pane (Chromium, 2048 × 1536 window) the live canvas
+held a 1-pixel checkerboard exactly at 1:1, followed pattern, source, scaling and
+picture changes, and moving patterns drew in about 1 ms a frame and ran at the
+display's refresh whenever the pane was visible. In headless Chrome 155 with a
+laptop screen and two pretend projectors (`scripts/live-check.mjs`), every check
+in that script passes: listing, matching outputs to displays by size, one window
+per click reported, placement over each display, full screen on it at its raster,
+wake lock held when allowed, closing from the editor.
+
+Not run: a real second display, Edge, Safari or Firefox's fallback path, the
+desktop launcher's copy, and anything measured at the cable (colour management,
+latency).
+
+An independent review before landing found eight problems, all fixed:
+`performance.timeOrigin` differs between processes after a Mac sleeps, so
+windows opened either side of one disagreed (now `clock.ts`); a window that
+opened and later closed was then reported as "didn't open"; display rasters
+at fractional scaling were matched exactly (now within a pixel or two, shown as
+"about"); a slow picture decode could overtake a newer one; every `storage`
+event rebuilt every object and redrew huge scaled stills (now unchanged parts
+keep their identity and stills draw once a frame); changes saved before the
+live window started listening were missed; "sound on" outlived a suspended
+AudioContext; rearranging displays lost track of live windows (now matched by
+the display name the window reports). Plus nits: mute now survives a reload,
+one wake lock at a time. Left as it is: a Close from one editor tab also
+reaches windows another tab opened.
+
+Fixing the second one turned up another: a `bye` posted from `pagehide` after
+`window.close()` never arrived, so closed windows sat in the list until the
+timeout. A window asked to close now says goodbye first. Raising the wait for a
+new window to report from 3.5 s to 6 s greyed out Go live for 6 s after each
+blocked window, so it's 2.5 s, and a display with something live on it is
+never reported as not opened.

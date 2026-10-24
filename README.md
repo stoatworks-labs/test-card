@@ -1,7 +1,7 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 254 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 454 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
@@ -164,6 +164,22 @@ clip and let it run once round before doors.
   name. That's the fastest proof the advanced output map matches what you think it does, and you
   don't need any way of getting a file to each output individually.
 
+
+## Live output
+
+**Live output** puts the pattern full screen on the displays plugged into this computer, with no
+file in between: for when the laptop is the source, or for bars on a monitor before anything else
+is rigged. In Chrome or Edge it lists the displays, gives each one the output that's its size (or
+whatever you choose, or a raster the size of the display itself), and opens a window over each.
+Click a window and it goes full screen on its display, at 1:1 when the sizes match. The windows
+follow every change in the editor and keep running if the editor tab is reloaded. Moving patterns
+play live, and AV sync's beep plays from the first window.
+
+Browsers allow one new window per click and only go full screen from a click in the window itself,
+so there's a click per display unless the site is allowed pop-ups. In other browsers you open a
+window and drag it over. What reaches the cable goes through the browser's and the OS's colour
+management, which hasn't been measured, so for levels and exact bar values play the PNG or MP4
+from the media server.
 ## Level range
 
 SMPTE bars are defined in Y′CbCr, a PNG is RGB, and a PNG can't say which convention it was written
@@ -250,6 +266,18 @@ for the invariants and the traps.
   matching in the edge-blend overlaps apart from at most nine antialiased edge pixels. The forest
   and the house came later: in their worst overlap at most four pixels are more than three code
   values out, though up to a couple of hundred more are out by one to three.
+- **Live output:** `scripts/live-check.mjs` drives Chrome 155, headless, with a laptop screen and two
+  pretend projectors (`--screen-info`): the displays are listed, each output goes to the display its
+  size, Chrome's one-window-per-click rule is reported, each window opens over its display and goes
+  full screen there with its canvas at the display's raster, and closing from the editor closes
+  them. In Chromium the live canvas at 1:1 holds a one-pixel checkerboard exactly. The sound
+  scheduler is tested against a pretend audio device running 80 ppm fast: every pass of the loop
+  starts within 0.2 ms of the picture's clock. An independent review before landing found eight
+  problems, among them windows opened either side of a Mac's sleep disagreeing about the time, a
+  closed window later reported as never opened, and a slow picture decode overtaking a newer one.
+  All are fixed, with checks for the first two. One small thing is left as it is: a Close from one
+  editor tab also reaches live windows another tab opened. Not tried: a real second display, Edge,
+  and what reaches the cable.
 - **Reviewed:** an independent review of the whole change before it landed found twelve problems,
   from a volcano that grew a different forest on each output to an MP4 export that crawled in a
   background tab. All twelve were fixed and the checks above re-run afterwards.

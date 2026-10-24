@@ -4,6 +4,8 @@ import { ImportPanel } from './ImportPanel'
 import { PatternPanel } from './PatternPanel'
 import { Preview } from './Preview'
 import { OutputList } from './OutputList'
+import { LiveButton, LivePanel } from './LivePanel'
+import { superviseLiveWindows } from '../live/supervise'
 import {
   buildManifest,
   compositionFileName,
@@ -40,6 +42,7 @@ export default function App() {
   const store = useStore()
   const [busy, setBusy] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [liveOpen, setLiveOpen] = useState(false)
   const cancel = useRef(false)
 
   const selected = store.outputs.find((o) => o.id === store.selectedId) ?? store.outputs[0] ?? null
@@ -65,6 +68,9 @@ export default function App() {
       live = false
     }
   }, [setImage])
+
+  // Live windows report in whether or not the panel is open.
+  useEffect(() => superviseLiveWindows(), [])
 
   const blockers = useMemo(
     () => renderBlockers(store.outputs, store.mode, store.composition),
@@ -371,6 +377,7 @@ export default function App() {
             </div>
 
             <div className="export-buttons">
+              <LiveButton open={liveOpen} onClick={() => setLiveOpen(!liveOpen)} />
               {busy ? (
                 <>
                   <span className="busy">{busy}</span>
@@ -408,6 +415,8 @@ export default function App() {
               )}
             </div>
           </div>
+          {liveOpen ? <LivePanel onClose={() => setLiveOpen(false)} /> : null}
+
           {moving ? (
             <p className="hint">
               A moving pattern. The MP4 is a seamless H.264 loop, encoded here in the browser; the

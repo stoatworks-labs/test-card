@@ -25,6 +25,10 @@ nothing is uploaded.
 > covered under **Moving patterns** below. A loop too big for the browser to encode whole comes out
 > as tiles; decoded and stitched back together, an 8K one matches the picture drawn whole.
 >
+> **Live output** has been driven in Chrome 155 with three pretend displays: it lists them, opens a
+> window over each, and each goes full screen on its own display at 1:1. It hasn't been tried with
+> a real second display yet.
+>
 > **No image or loop it produces has been played out to a real projector, LED processor or display
 > and measured.** The patterns are correct as pixels; what a screen does with them is something
 > this can't tell you.
@@ -119,7 +123,9 @@ or record its output on anything that takes picture and sound together. Find whe
 in the sound, step to that frame, and read the lit box. **+2** means the sound arrives two frames
 after the picture; **−1**, one frame before it.
 
-- The sound is in the **MP4** only. The preview is silent and a PNG is just a picture.
+- The sound is in the **MP4**, and in **Live output**'s first window once you've clicked it. The
+  preview is silent and a PNG is just a picture. Measure with the MP4: the live sound's delay
+  through the browser hasn't been measured.
 - Make the MP4 at the frame rate the system runs at, so a frame in the file is a frame on the
   screen.
 - The middle of the ring takes the same **In the middle** settings as the classic card: the logo,
@@ -244,6 +250,71 @@ the actual problem.
 
 ---
 
+## Live output: straight to the displays
+
+**Live output**, beside the download buttons, puts the pattern full screen on the displays plugged
+into this computer, with no file in between. It's for when the laptop is the source: plugged into
+the projectors or the LED processor, or bars on a monitor before anything else is rigged.
+
+![The Live output panel listing a laptop screen and two projectors, each projector given the output of its own size](screenshots/live-output.png)
+
+*Three displays listed. Each projector got the output that's its size, and both are live, full
+screen at 1:1; the laptop's own screen is left out.*
+
+1. Press **Live output**. In Chrome or Edge, **Find my displays** asks whether the page may manage
+   windows on all your displays. Say yes and it lists them, each with its raster in device pixels.
+   On Windows at 125% or 150% the browser only knows that to a pixel or so, and says "about".
+2. Tick the displays to use and choose what each one **Shows**: an output from your list, the whole
+   composition, or **The display's own size**, which needs no import at all. An output that's the
+   same size as a display goes to that display by itself.
+3. Press **Go live**. A window opens over each display.
+4. Click each window once, or press **F** in it, and it goes full screen on its display.
+
+Browsers won't let a page do two things, which is why there's clicking involved:
+
+- **One window per click.** The first display's window opens and the panel says which didn't. Press
+  **Go live** again for each one left, or allow pop-ups for the site (the icon at the right of the
+  address bar) and they'll all open at once.
+- **Full screen needs a click in the window itself.** Nothing the editor does can do it for you.
+
+Once they're up:
+
+- The live windows follow the editor. Change the pattern, the burn-in, the outputs or the picture
+  and they change with it. Each is a page of its own, so reloading or closing the editor tab leaves
+  them running, and the editor finds them again when it comes back.
+- **Live now** lists each window: what it shows, whether it's full screen, 1:1 or scaled, and the
+  frame rate of a moving pattern. You can change what one shows, mute it, or close it from there.
+- **Fit the display** scales a raster that isn't the display's size until it fills it, and the
+  window says by how much (scaled, 1px detail is approximate). **1:1 pixels, from the top left**
+  never scales, and crops a raster that's bigger than the display.
+- In a window, **Esc** leaves full screen and **I** shows or hides the info. The pointer hides
+  itself once it's full screen.
+- Moving patterns play live. Every window works out where it is in the loop from the computer's
+  clock, so a scene spanning several outputs stays in step across them.
+- AV sync's beep comes from the first window opened, once it's been clicked (a browser won't make a
+  sound before that). The sound is put back in step with the picture every time round the loop.
+- A live window stops the display going to sleep. Where the browser won't allow that (on plain
+  http, for one), the window says so, and you'll want display sleep off by hand.
+
+Without the display list (Safari, Firefox, the permission refused, or a copy opened over plain http
+from another machine, as the desktop app's is), **Open a live window** opens one here. Drag it to
+its display and click it.
+
+**A Mac at a scaled resolution.** Set a display to anything but its default in System Settings and
+macOS draws a bigger picture than the display takes, then shrinks it to fit the signal. The
+browser only sees the bigger picture, so the panel lists that size, and "1:1" in the window means
+1:1 with it, not with the cable. Put the display on its default resolution for a pixel check.
+Projectors and LED processors usually come up that way anyway.
+
+**What it can't tell you.** I haven't measured what comes out of the computer's video port. The
+browser and the operating system colour-manage everything on screen to the display's colour
+profile, so the code values on the cable may not be the PNG's. Live output is for checking the map,
+the geometry, the scaling and the pixel check; for levels, the pluge and exact bar values, play the
+PNG or MP4 from the media server. The same goes for AV sync: the browser adds its own delay to the
+picture and to the sound, which nobody has measured, so to measure a system, play the MP4.
+
+---
+
 ## Level range: the app asks because a PNG cannot say
 
 SMPTE bars are defined in Y′CbCr. A PNG is RGB, and a PNG can't record which convention it was
@@ -297,4 +368,11 @@ You can also just add outputs by hand.
 | **"…will not take …, whole or cut into as many as 64 tiles"** | Too big for this browser's encoder even in 64 pieces. Export PNGs. |
 | **An MP4 freezes after half a second in Resolume, then carries on at the wrap** | Arena's H.264 playback from cold, not the file. Convert it to DXV with Alley, or let it run once round before the show. |
 | **"That loop would be about … GB"** or **"Those … loops would come to about … GB"** | Too long, too big or too high a bitrate to build in a tab, every tile and output in the ZIP counted. Shorten the loop, lower the bitrate, or export fewer outputs at a time. |
+| **Only one live window opened** | A browser lets a page open one window per click. Press **Go live** again, or allow pop-ups for the site. |
+| **A live window won't go full screen** | It needs a click, or F, in that window. The editor can't do it for you. |
+| **"scaled …%" in a live window** | The raster isn't the display's size. Give it the output that matches, **The display's own size**, or pick 1:1. |
+| **Live output has no display list, only "Open a live window"** | Not Chrome or Edge, the permission was refused, or the page is on plain http. Drag the window to its display instead. |
+| **"can't stop the display sleeping here"** | The browser wouldn't hold a wake lock (it needs https or localhost). Turn display sleep off by hand. |
+| **A live 1:1 pixel check is soft on a Mac** | The display is on a scaled resolution, so macOS is resizing it. Put it back on its default. |
+| **Live bars measure wrong on a scope** | The browser's and the OS's colour management. For levels, play the PNG from a media server. |
 | **The image has gone** | It's kept in this browser's storage. Another browser, a private window or cleared site data won't have it. |

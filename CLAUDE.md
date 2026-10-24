@@ -8,7 +8,7 @@ Command reference. For the model, the invariants and the traps, read
 ```bash
 npm install
 npm run dev          # vite dev server
-npm test             # vitest — 427 tests, no ffmpeg needed (MP4 checks skip without it)
+npm test             # vitest — 454 tests, no ffmpeg needed (MP4 checks skip without it)
 npm run test:watch
 npm run build        # tsc -b && vite build -> dist/
 npm run preview      # serve the built dist/ (does NOT apply _headers)
@@ -24,6 +24,14 @@ cf-run npx wrangler deploy
 
 Or connect the repo in Cloudflare: build `npm ci && npm run build`, deploy
 `npx wrangler deploy`. A static-assets **Worker**, not a Pages project.
+
+## Checking live output in a real Chrome
+
+```bash
+npm run build && npm run serve:dist          # leave running
+node scripts/live-check.mjs                  # headless Chrome, three pretend displays
+SHOT=docs/screenshots/live-output.png node scripts/live-check.mjs   # also redraws the guide's picture
+```
 
 ## Regenerating the RP 219 reference
 

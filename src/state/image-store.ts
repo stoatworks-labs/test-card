@@ -38,6 +38,7 @@ async function run<T>(mode: IDBTransactionMode, f: (s: IDBObjectStore) => IDBReq
 export async function saveImage(blob: Blob, name: string): Promise<void> {
   try {
     await run('readwrite', (s) => s.put({ blob, name }, KEY))
+    announce()
   } catch {
     // Not persisted; it still works until the page is closed.
   }
@@ -55,9 +56,29 @@ export async function loadImage(): Promise<{ blob: Blob; name: string } | null> 
 export async function clearImage(): Promise<void> {
   try {
     await run('readwrite', (s) => s.delete(KEY))
+    announce()
   } catch {
     // Nothing to clear, or nowhere to clear it from.
   }
+}
+
+// Live windows draw the same picture, and learn it has changed from here: the
+// stored copy is the one they read, so the news goes out once it is stored.
+const CHANNEL = 'test-card/image'
+
+function announce() {
+  if (typeof BroadcastChannel === 'undefined') return
+  const ch = new BroadcastChannel(CHANNEL)
+  ch.postMessage('changed')
+  ch.close()
+}
+
+/** Calls `f` whenever another page stores or clears the image. */
+export function onImageChanged(f: () => void): () => void {
+  if (typeof BroadcastChannel === 'undefined') return () => {}
+  const ch = new BroadcastChannel(CHANNEL)
+  ch.onmessage = () => f()
+  return () => ch.close()
 }
 
 /** Decode a file into something a canvas can draw, honouring EXIF rotation. */

@@ -61,7 +61,14 @@ function merge<T>(base: T, patch: DeepPartial<T>): T {
 
 function load(): Persisted | null {
   try {
-    const raw = localStorage.getItem(KEY)
+    return parse(localStorage.getItem(KEY))
+  } catch {
+    return null
+  }
+}
+
+function parse(raw: string | null): Persisted | null {
+  try {
     if (!raw) return null
     const parsed = JSON.parse(raw) as Persisted
     if (!Array.isArray(parsed.outputs)) return null
@@ -73,12 +80,14 @@ function load(): Persisted | null {
   }
 }
 
-const initial: Persisted = load() ?? {
+const EMPTY: Persisted = {
   outputs: [],
   settings: DEFAULT_SETTINGS,
   projectName: 'test-card',
   mode: 'per-output',
 }
+
+const initial: Persisted = load() ?? EMPTY
 
 export const useStore = create<State>((set, get) => {
   const persist = () => {
@@ -161,5 +170,50 @@ export const useStore = create<State>((set, get) => {
       }),
   }
 })
+
+/**
+ * Keep this page's state in step with what another tab saves.
+ *
+ * For live windows: they show what the editor has set up, and the editor
+ * already writes every change to localStorage, which fires `storage` in every
+ * other page of this origin. Nothing is written back from here, so a live
+ * window can never overwrite the editor's state with a stale copy.
+ *
+ * What hasn't changed stays the same object, so renaming the project or nudging
+ * one setting doesn't make a live window redraw everything else.
+ */
+export function followSavedState(): () => void {
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+  const apply = (raw: string | null) => {
+    if (raw === null) {
+      useStore.setState({ ...EMPTY, composition: undefined })
+      return
+    }
+    // Something unreadable is ignored rather than taken as "empty".
+    const next = parse(raw)
+    if (!next) return
+    const cur = useStore.getState()
+    useStore.setState({
+      outputs: same(cur.outputs, next.outputs) ? cur.outputs : next.outputs,
+      settings: same(cur.settings, next.settings) ? cur.settings : next.settings,
+      composition: same(cur.composition, next.composition) ? cur.composition : next.composition,
+      projectName: next.projectName,
+      mode: next.mode,
+    })
+  }
+  const onStorage = (e: StorageEvent) => {
+    // A null key is the whole of storage being cleared.
+    if (e.key !== KEY && e.key !== null) return
+    apply(e.key === null ? null : e.newValue)
+  }
+  window.addEventListener('storage', onStorage)
+  // Anything saved between this page reading its state and listening for more.
+  try {
+    apply(localStorage.getItem(KEY))
+  } catch {
+    // No storage to read: nothing to follow either.
+  }
+  return () => window.removeEventListener('storage', onStorage)
+}
 
 export const _internals = { merge }
