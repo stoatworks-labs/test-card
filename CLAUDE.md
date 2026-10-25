@@ -8,7 +8,7 @@ Command reference. For the model, the invariants and the traps, read
 ```bash
 npm install
 npm run dev          # vite dev server
-npm test             # vitest — 454 tests, no ffmpeg needed (MP4 checks skip without it)
+npm test             # vitest — 533 tests, no ffmpeg needed (MP4 checks skip without it)
 npm run test:watch
 npm run build        # tsc -b && vite build -> dist/
 npm run preview      # serve the built dist/ (does NOT apply _headers)
@@ -32,6 +32,16 @@ npm run build && npm run serve:dist          # leave running
 node scripts/live-check.mjs                  # headless Chrome, three pretend displays
 SHOT=docs/screenshots/live-output.png node scripts/live-check.mjs   # also redraws the guide's picture
 ```
+
+## Checking the idle patterns against Idler
+
+```bash
+node scripts/check-idle-port.mjs               # needs a checkout at ~/Projects/resolume/idler
+node scripts/check-idle-port.mjs <path-to-idler>
+```
+
+The two shaders against Idler's `Shaders.cpp`, and every saver's mesh, with the loop fitting off,
+against Idler's own browser port. Run it after changing anything under `src/patterns/idle/`.
 
 ## Regenerating the RP 219 reference
 

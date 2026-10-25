@@ -413,3 +413,77 @@ timeout. A window asked to close now says goodbye first. Raising the wait for a
 new window to report from 3.5 s to 6 s greyed out Go live for 6 s after each
 blocked window, so it's 2.5 s, and a display with something live on it is
 never reported as not opened.
+
+## 2026-10-25 — idle patterns: Idler's screensavers
+
+Allan asked for the effects from Idler (`~/Projects/resolume/idler`, the Windows 95/98
+screensavers as a Resolume generator) in a new pattern category, "Idle". All eleven are
+here, each its own pattern, starting as Idler's first eleven presets have them.
+
+Where the code came from: Idler's browser demo (`demo/plugin.js`) is a hand port of its
+C++ savers, checked there against the C++ by `demo/tools/check_geometry.mjs`. Mine is a
+TypeScript translation of that port, under `src/patterns/idle/`, with the two scene
+shaders copied from `source/Shaders.cpp`. `scripts/check-idle-port.mjs` re-checks both
+against an Idler checkout: shader text identical, and with the loop fitting off every
+saver's mesh, camera and fog within 3e-15 of Idler's at 0, 11.5 and 37.25 s.
+
+Decisions:
+
+- **WebGL2, not the 2D canvas.** The 3D savers cross themselves (pipes through their
+  elbows, bricks 1.5 mm proud of their mortar) and need a depth buffer. A painter's sort in
+  2D would have been a third implementation and still wrong where triangles cross. The GL
+  canvas is drawn into the pattern's 2D context, so preview, export, MP4, tiles and live
+  windows didn't change. Resolution comes from the context's transform.
+- **Pieces by cropping the projection**, at most 2048 px a side (a 4x multisampled 8K
+  canvas would be over a gigabyte). The same crop makes a spanned output a window onto
+  the surface.
+- **Rates fitted to the loop.** Idler's savers are pure functions of time but not
+  periodic. Every rate is rounded to whole cycles per loop (`fit`); families that must
+  stay different are rounded up or down by a hashed chance (`fitSpread`), or every
+  Mystify corner on a 10 s loop would make exactly one trip; slow camera orbits that
+  would be forced to a whole turn sway instead (`orbit`). Curves and Colors needed more:
+  Idler keeps its ratio off a whole number so the figure precesses forever, so here the
+  precession is measured from the drawing head and its drift fitted separately. Any one
+  frame is a figure Idler draws.
+- **Pipes and Maze restart once a loop.** Replay makes them pure, not periodic, so each
+  loop is one run from the seed. The restart is at 40% (Pipes) and 50% (Maze) of the loop
+  so the still at 0 s is well into a run. Pipes just clears, as the original did when
+  full; the maze fades out and in over half a second, because a jump to another corridor
+  looks like a broken file.
+- **Speed 0 holds the frame at t = 0**, not saver time zero, so a stopped 3D Pipes isn't
+  an empty box, and `isAnimated` is false for it.
+
+Verified: 79 new tests (periodicity mesh for mesh at four loop lengths and speeds,
+replay played vs jumped, the marquee across its seam on wide surfaces, the clock, the
+crop maths). In the app's browser pane: all
+eleven render through `renderOutputTo`; a 3840 x 1080 output against two spanned
+1920 x 1080 halves differs only in scattered antialiased edge pixels (364 of 4.1 million
+for Mystify, under 30 for the rest, none at the join); Pipes, Mystify, Maze and Curves
+encoded as 4 s, 25 fps loops at 960 x 540 in 7–14 ms a frame, and ffmpeg's step from the
+last frame back to the first is inside the range of the other steps (the one big step in
+Pipes is its box clearing at 40%, the maze's are its corners).
+
+Not run: Safari, Firefox, Edge; a tiled (over 4096 x 2304) export of an idle pattern; the
+live windows with one; Resolume; a real wall. LivePremier Plus gets them at its next
+engine sync, and its webview will need WebGL2 for them.
+
+An independent review before landing found three real problems, all fixed:
+
+- Scrolling Marquee's copies only ran from one repeat left of the entry point rightwards,
+  and everything right of the entry point is culled, so on a surface wider than the repeat
+  (a span, a long strip, short text) the leftmost visible copy vanished every time the
+  scroll wrapped, and fitting puts a wrap on the loop's seam. Idler has the same loop and
+  the same gap on a wide composition. Now the copies reach the left edge, drawn left to
+  right so a copy keeps its place in the mesh when the wrap renumbers it.
+- A context loss could latch "no WebGL2" for the page's life (a GPU process restarting
+  hands out contexts already lost, and the shader compile threw). Now it retries, falls
+  back to a DOM canvas (Safari 16.4–16.x has OffscreenCanvas without WebGL2), and a loss
+  during a draw is reported: the export stops instead of encoding notices. Checked by
+  hand with `WEBGL_lose_context`: the next frame draws on a fresh context.
+- Mystify's and Beziers' trails and the starfield's streaks were fixed seconds of saver
+  time, and fitting makes a slowed saver's rates faster in saver time, so at a low speed
+  the trail grew to the whole path. They're now Idler's share of a cycle (`behind`).
+
+Quirks kept from Idler: Speed's centre is 0.94x, not 1 (its dead zone shifts the curve);
+the maze stands still for its first cell after a restart (Idler's reset puts the
+previous cell on the current one).

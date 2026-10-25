@@ -1,7 +1,7 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 454 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 533 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
@@ -23,7 +23,8 @@ nothing is uploaded.
 
 It also does the other sort of test pattern: the one you put up while the client is walking in.
 Rulers that measure the wall in metres, a bunch of bananas for scale, life-size dinosaurs that
-don't fit, a hamster on every LED tile, and a few moving scenes that export as seamless MP4 loops.
+don't fit, a hamster on every LED tile, a few moving scenes that export as seamless MP4 loops, and
+the Windows 95 screensavers.
 
 ![Test Card with one 1920 × 1080 output: SMPTE RP 219 bars with the output name and resolution burnt in](docs/screenshots/test-card.png)
 
@@ -77,6 +78,38 @@ For the one week a year the LED wall is expected to be festive.
 | **Spooky forest** | A night wood scrolling past in five layers of parallax: a full moon, mist, dead trees with eyes in them, witches on broomsticks and bats. Moves |
 | **Haunted house** | A house on a hill with lights in most of its windows and something in one of the others, zombies and skeletons walking the graveyard in front, and vampires flying round the back. Moves |
 
+### Idle
+
+The Windows 95 and 98 screensavers, for the hours a wall spends waiting for something to happen.
+They come from [Idler](https://github.com/stoatworks-labs/idler), my Resolume generator of the same
+eleven, and they're drawn by the same code: a port of its savers, through its own two shaders.
+
+![All eleven idle patterns: Mystify, Beziers, Curves and Colors, Flying Windows, Flying Through Space, Scrolling Marquee, 3D Maze, 3D Pipes, 3D Flying Objects, 3D FlowerBox and 3D Text, and Mystify again in a spread of hues](docs/screenshots/idle.jpg)
+
+<sub>Stills of all eleven at 1920 × 1080, as each ran on the machine, plus Mystify with its colour set to a spread of hues.</sub>
+
+| Pattern | What it is for |
+|---|---|
+| **Mystify** | Polygons bouncing round the screen, each trailing its own recent shapes. Moves |
+| **Beziers** | Mystify's motion with a curve through the points. Moves |
+| **Curves and Colors** | A spirograph drawing itself on a rotating palette. Moves |
+| **Flying Windows** | Four-pane logos streaming out of the middle of the screen. Moves |
+| **Flying Through Space** | The starfield. Turn up the streak for warp speed. Moves |
+| **Scrolling Marquee** | Your text crossing the screen, bobbing as it goes. Moves |
+| **3D Maze** | A first-person walk down brick corridors in a maze with no end. Moves |
+| **3D Pipes** | Plumbing growing into a box, the odd teapot included. Moves |
+| **3D Flying Objects** | Lit solids, boxes to teapots, tumbling past. Moves |
+| **3D FlowerBox** | A solid on the spot, swelling between a box, a ball and a flower. Moves |
+| **3D Text** | Your text in extruded letters, turning. Moves |
+
+Each starts as it ran on the machine and keeps its own settings. The sliders are Idler's, named for
+what they do in that saver; the 3D ones add shading (lit or wireframe), a camera and fog.
+
+The originals never come back to where they started, and a loop has to. So every speed in them is
+rounded to a whole number of cycles in the loop, which a longer loop notices less. 3D Pipes and
+3D Maze grow, which no rounding fixes, so each loop is one run from the seed, starting again once a
+loop: the box clears, and the maze fades out and back in at a new start. They need WebGL2.
+
 Every pattern can carry a burn-in (output name, resolution, pattern, plus your own text) and can
 draw the imported slice or port outlines on top.
 
@@ -102,8 +135,8 @@ because nothing can be life-size both ways at once on a stretched picture; it ge
 
 ## Moving patterns and MP4 loops
 
-The ocean, the scroll, the volcano, the hamsters and the three Halloween patterns move, and so
-does a broken wall over any of them (or with flicker or data noise in it). They animate in the preview and export as **H.264 MP4
+The ocean, the scroll, the volcano, the hamsters, the three Halloween patterns and the eleven idle
+ones move, and so does a broken wall over any of them (or with flicker or data noise in it). They animate in the preview and export as **H.264 MP4
 loops**, encoded in the browser, one per output or one for the composition. A PNG of any frame is
 still there.
 
@@ -254,6 +287,21 @@ for the invariants and the traps.
   walkers' feet on the ground through every stride and every face inside its pumpkin, and run the
   painters through a recording context to check the wrap, the span and the canvas state. A review
   before landing found that a spanned pumpkin patch was the same patch on every output; fixed.
+- **Idle patterns:** with the loop fitting switched off, all eleven savers build exactly the
+  meshes, cameras and fog that Idler's own browser port builds, at three different times
+  (`scripts/check-idle-port.mjs`; that port is checked against Idler's C++ over there), and the two
+  shaders are Idler's, character for character. With the fitting on, the tests hold every saver's
+  mesh at t = 0 and t = T equal at four loop lengths and speeds, and 3D Pipes and 3D Maze to the
+  same mesh whether a frame is played up to or jumped to. In Chrome (the app's browser pane): a
+  3840 × 1080 output matches two spanned 1920 × 1080 halves apart from scattered antialiased edge
+  pixels (a few hundred of 4 million at most, none at the join); Pipes, Mystify, Maze and Curves
+  loops encoded at 960 × 540, 25 fps, and read back by ffmpeg, step from the last frame to the
+  first inside the range of every other step. An independent review before landing found three
+  problems, all fixed: on a surface wider than its repeat, Scrolling Marquee lost its leftmost copy
+  each time the scroll wrapped, which is the loop's seam (Idler draws it the same way); one lost
+  graphics context left the pattern blank until a reload; and a slowed Mystify drew longer trails
+  rather than slower ones. Not tried: Safari, Firefox, tiled 8K exports of them, Resolume, or a
+  real wall.
 - **In Resolume:** Arena 7.28.1 (macOS 26.4.1) opened ocean, scroll and hamster loops at
   1920 × 1080 and an ocean at 3840 × 2160, all at 30 fps and exactly 10 s. Its output snapshot of
   frame 0 matched a BT.709 limited-range decode with a mean error of 0.90 code values at 1080p and

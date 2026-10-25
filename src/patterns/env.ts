@@ -11,6 +11,7 @@
 
 import type { PatternSettings } from '../types'
 import { PUMPKIN_FACES } from './art/halloween'
+import { idleMoves, isIdle } from './idle'
 
 /** Anything `drawImage` accepts that also knows its own size. */
 export type PatternImage = CanvasImageSource & { width: number; height: number }
@@ -82,8 +83,12 @@ const MOVING: ReadonlySet<PatternSettings['kind']> = new Set([
   'av-sync',
 ])
 
-/** Whether a kind of pattern moves with these settings. Pumpkins only do if they have candles or faces to pull. */
+/**
+ * Whether a kind of pattern moves with these settings. Pumpkins only do if they have candles or faces to pull,
+ * and an idle pattern unless its speed is turned right down.
+ */
 function moves(kind: PatternSettings['kind'], settings: PatternSettings): boolean {
+  if (isIdle(kind)) return idleMoves(kind, settings.idle)
   if (kind === 'pumpkins') {
     const p = settings.pumpkins
     // Only faces it knows: a stored list of names it doesn't would draw plain, still pumpkins.

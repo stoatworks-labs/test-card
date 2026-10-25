@@ -25,6 +25,9 @@ nothing is uploaded.
 > covered under **Moving patterns** below. A loop too big for the browser to encode whole comes out
 > as tiles; decoded and stitched back together, an 8K one matches the picture drawn whole.
 >
+> The idle patterns are a port of Idler's screensavers, checked mesh for mesh against Idler's own
+> code, and their loops have been encoded and read back with no seam.
+>
 > **Live output** has been driven in Chrome 155 with three pretend displays: it lists them, opens a
 > window over each, and each goes full screen on its own display at 1:1. It hasn't been tried with
 > a real second display yet.
@@ -174,6 +177,49 @@ between the bands.
 Like the other scenes, the forest and the house carry on across outputs when **Carry on across
 outputs** is ticked. The zombies and skeletons go round once per loop, so a longer loop makes them
 walk slower; at 10 s they're a bit brisk for the undead.
+
+### Idle
+
+The Windows 95 and 98 screensavers, for the hours a wall spends waiting for something to happen.
+They come from Idler, my Resolume generator of the same eleven, and they're drawn by the same code:
+a port of its savers, through its own two shaders.
+
+![All eleven idle patterns: Mystify, Beziers, Curves and Colors, Flying Windows, Flying Through Space, Scrolling Marquee, 3D Maze, 3D Pipes, 3D Flying Objects, 3D FlowerBox and 3D Text, and Mystify again in a spread of hues](screenshots/idle.jpg)
+
+| Pattern | What it is for |
+|---|---|
+| **Mystify** | Polygons bouncing round the screen, each trailing its own recent shapes. Moves. |
+| **Beziers** | Mystify's motion with a curve through the points. Moves. |
+| **Curves and Colors** | A spirograph drawing itself on a rotating palette. Moves. |
+| **Flying Windows** | Four-pane logos streaming out of the middle of the screen. Moves. |
+| **Flying Through Space** | The starfield. Turn up **Streak** for warp speed. Moves. |
+| **Scrolling Marquee** | Your **Text**, crossing the screen and bobbing as it goes. Moves. |
+| **3D Maze** | A first-person walk down brick corridors, in a maze with no end to it. Moves. |
+| **3D Pipes** | Plumbing growing into a box, the odd teapot included. Moves. |
+| **3D Flying Objects** | Lit solids, boxes to teapots, tumbling past. Moves. |
+| **3D FlowerBox** | A solid on the spot, swelling between a box, a ball and a flower. Moves. |
+| **3D Text** | Your **Text** in extruded letters, turning. Moves. |
+
+Each one starts as it ran on the machine and keeps its own settings, so fiddling with Mystify
+leaves the maze alone; **As it ran** puts one back. The sliders are Idler's. Its six scene controls
+mean something different to each saver, so here they're named for what they do in that one:
+**Polygons**, **Corners** and **Trail** in Mystify, **Pipes**, **Grid** and **Fill before
+clearing** in 3D Pipes. The 3D ones also have **Shading** (lit or wireframe), a camera and **Fog**.
+Every one has **Speed**, which stops it altogether at the bottom, and a **Colour** mode: the
+saver's own palette, one colour, a spread of hues, or one colour rotating.
+
+A loop has to come back to where it started, and the originals never do. So every speed in them is
+rounded to a whole number of cycles in the loop: on a 10 s loop the Mystify corners each make one
+or two trips and 3D FlowerBox turns over once. A longer loop leaves more of the original speeds
+alone. 3D Pipes and 3D Maze grow, and nothing rounds that, so each loop is one run from the
+**Seed**, starting again once a loop: the box clears, as it used to when it filled up, and the maze
+fades out and back in at a new start. The restart falls part-way through the loop, so the still at
+0 s is well into a run, not an empty box.
+
+With **Carry on across outputs** ticked they're one picture across the whole surface, each output
+a window onto it: the maze is seen wider across a span, not closer.
+
+They need WebGL2, which any recent browser has; without it the pattern says so instead of drawing.
 
 ---
 

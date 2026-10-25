@@ -54,6 +54,14 @@ The full transitive dependency set for any build is pinned in this repo's lockfi
 which is the authoritative list. What is named above is the layers a reader would
 want to know about, not every package that has ever been resolved.
 
+## Inspirations
+
+What this set out to be. No code, assets or binaries from any of these were used or examined — the debt is to the idea.
+
+### The Windows 95 and 98 screensavers — Microsoft
+
+The eleven idle patterns are the savers from Idler, the Resolume generator that rebuilt them, ported across — the flat ones that shipped with Windows and the OpenGL ones that arrived with Plus! and became stock in 98. No Microsoft code, assets or binaries were used or examined; every saver is a fresh implementation written to match remembered behaviour. The debt is to the originals and to whoever at Microsoft decided a locked screen should be worth watching.
+
 ## Standards and published specifications
 
 What the implementation is measured against.

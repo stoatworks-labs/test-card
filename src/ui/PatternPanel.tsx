@@ -20,6 +20,8 @@ import {
   SceneControls,
   TileControls,
 } from './NoveltyControls'
+import { IdleControls } from './IdleControls'
+import { isIdle } from '../patterns/idle'
 
 type Patch = (patch: Record<string, unknown>) => void
 
@@ -39,6 +41,20 @@ const HALLOWEEN: { kind: PatternKind; hint: string }[] = [
   { kind: 'pumpkins', hint: "A jack-o'-lantern on every LED tile" },
   { kind: 'spooky-forest', hint: 'Parallax night wood, witches and bats' },
   { kind: 'haunted-house', hint: 'Zombies, skeletons, flying vampires' },
+]
+
+const IDLE: { kind: PatternKind; hint: string }[] = [
+  { kind: 'mystify', hint: 'Bouncing polygons trailing their history' },
+  { kind: 'beziers', hint: 'Mystify’s motion, drawn as curves' },
+  { kind: 'curves', hint: 'A spirograph drawing itself' },
+  { kind: 'flying-windows', hint: 'Four-pane logos streaming out' },
+  { kind: 'starfield', hint: 'The starfield everybody remembers' },
+  { kind: 'marquee', hint: 'Your text crossing the screen' },
+  { kind: 'maze', hint: 'A walk down brick corridors' },
+  { kind: 'pipes', hint: 'Plumbing growing into a box' },
+  { kind: 'flying-objects', hint: 'Lit solids tumbling past' },
+  { kind: 'flowerbox', hint: 'A solid morphing on the spot' },
+  { kind: 'text-3d', hint: 'Extruded lettering, turning' },
 ]
 
 const KINDS: { kind: PatternKind; hint: string }[] = [
@@ -108,6 +124,8 @@ export function PatternPanel({
       {grid(NOVELTY)}
       <h3 className="kind-group">Halloween</h3>
       {grid(HALLOWEEN)}
+      <h3 className="kind-group">Idle</h3>
+      {grid(IDLE)}
 
       {kind === 'rulers' ? <RulerControls opts={settings.rulers} patch={sub('rulers')} /> : null}
       {kind === 'bananas' ? <BananaControls opts={settings.bananas} patch={sub('bananas')} /> : null}
@@ -126,6 +144,7 @@ export function PatternPanel({
       {kind === 'dino-scroll' || kind === 'volcano' || kind === 'spooky-forest' || kind === 'haunted-house' ? (
         <SceneControls kind={kind} opts={settings.scene} patch={sub('scene')} />
       ) : null}
+      {isIdle(kind) ? <IdleControls kind={kind} opts={settings.idle} patch={sub('idle')} /> : null}
       {kind === 'broken-wall' ? <BrokenControls opts={settings.broken} patch={sub('broken')} /> : null}
       {kind === 'image' ? (
         <ImageControls opts={settings.image} patch={sub('image')} image={image} onImage={onImage} />

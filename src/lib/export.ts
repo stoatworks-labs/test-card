@@ -52,6 +52,17 @@ export const PATTERN_SLUGS: Record<PatternSettings['kind'], string> = {
   'classic-card': 'classic',
   'levels-check': 'levels',
   'av-sync': 'avsync',
+  mystify: 'mystify',
+  beziers: 'beziers',
+  curves: 'curves',
+  'flying-windows': 'flyingwindows',
+  starfield: 'starfield',
+  marquee: 'marquee',
+  maze: 'maze',
+  pipes: 'pipes',
+  'flying-objects': 'flyingobjects',
+  flowerbox: 'flowerbox',
+  'text-3d': 'text3d',
 }
 
 /** PNG for a still, MP4 for a loop. The loop's name says its frame rate and length too. */

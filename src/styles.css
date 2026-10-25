@@ -156,6 +156,21 @@ input[type='color'] {
   cursor: pointer;
 }
 
+input[type='range'] {
+  padding: 0;
+  border: none;
+  background: transparent;
+  accent-color: var(--accent);
+  height: 18px;
+}
+
+.field .readout {
+  float: right;
+  font-weight: normal;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 input[type='checkbox'] {
   width: auto;
   accent-color: var(--accent);

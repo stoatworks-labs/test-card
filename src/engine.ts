@@ -8,6 +8,9 @@
  * what LivePremier Plus does with it: it bundles this file with rolldown
  * (`tools/sync-test-card.mjs` there), builds Outputs from a switcher's own
  * output and canvas geometry, and puts the result on the switcher as a still.
+ * The one exception is the eleven idle patterns, which draw with WebGL2 into the
+ * 2D canvas when asked to paint (`patterns/idle/gl.ts`); importing needs nothing,
+ * and without WebGL2 they paint a message saying so.
  *
  * Changing what this exports changes LivePremier Plus's vendored copy the next
  * time it syncs. Add freely; rename or remove only with that in mind.

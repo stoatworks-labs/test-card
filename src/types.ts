@@ -141,6 +141,8 @@ export type PatternKind =
   | 'classic-card'
   | 'levels-check'
   | 'av-sync'
+  // Idle: the Windows 95/98 screensavers, from Idler. All of them moving.
+  | IdleKind
 
 /**
  * Output level range.
@@ -389,6 +391,57 @@ export type LevelsCheckOptions = {
   notes: boolean
 }
 
+/** The eleven idle patterns, in Idler's own order: the ones that shipped with Windows, then the OpenGL ones. */
+export type IdleKind =
+  | 'mystify'
+  | 'beziers'
+  | 'curves'
+  | 'flying-windows'
+  | 'starfield'
+  | 'marquee'
+  | 'maze'
+  | 'pipes'
+  | 'flying-objects'
+  | 'flowerbox'
+  | 'text-3d'
+
+/**
+ * How one idle pattern looks: Idler's own controls, held as Idler holds them —
+ * 0..1, converted by the same curves — so its presets copy across as they are.
+ * The seven scene controls mean something different to each saver; the panel
+ * names them per saver.
+ */
+export type IdleLook = {
+  density: number
+  complexity: number
+  size: number
+  length: number
+  lineWidth: number
+  variation: number
+  shading: 'flat' | 'lit' | 'wireframe'
+  /** 0.5 = as fast as Idler runs it; 0 stops it. */
+  speed: number
+  fov: number
+  camDistance: number
+  /** 0.5 = level. */
+  camTilt: number
+  fog: number
+  colourMode: 'classic' | 'tint' | 'spread' | 'cycle'
+  colour: string
+  hueSpread: number
+  /** 0.5 = no cycling. */
+  hueCycle: number
+  background: string
+}
+
+export type IdleOptions = {
+  seed: number
+  /** What Scrolling Marquee and 3D Text spell out. */
+  text: string
+  /** Each pattern keeps its own, so switching between them does not drag one's sliders onto another. */
+  looks: Record<IdleKind, IdleLook>
+}
+
 export type PumpkinFace = 'classic' | 'fierce' | 'happy' | 'surprised' | 'sly' | 'goofy'
 
 export type PumpkinOptions = {
@@ -496,6 +549,7 @@ export type PatternSettings = {
   scene: SceneOptions
   broken: BrokenWallOptions
   image: ImageOptions
+  idle: IdleOptions
   overlay: OverlayOptions
   regionOverlay: RegionOverlayOptions
 }

@@ -38,6 +38,7 @@ import { drawLevelsCheck } from './levels'
 import { drawAvSync, SAMPLE_RATE, syncAudio } from './avsync'
 import { drawBrokenWall } from './broken'
 import { drawImagePattern } from './image'
+import { drawIdle, IDLE_KINDS, isIdle } from './idle'
 import { loopTiming } from './loop'
 import { resolvePitch } from './scale'
 
@@ -85,6 +86,10 @@ export function paintPattern(
   env: PaintEnv = plainEnv(w, h),
 ) {
   const range = settings.levels
+  if (isIdle(settings.kind)) {
+    drawIdle(ctx, w, h, settings.kind, settings.idle, env)
+    return
+  }
   switch (settings.kind) {
     case 'smpte-rp219':
       drawSmpteBars(ctx, w, h, range)
@@ -190,6 +195,7 @@ const SURFACE_KINDS: ReadonlySet<PatternKind> = new Set<PatternKind>([
   'pumpkins',
   'spooky-forest',
   'haunted-house',
+  ...IDLE_KINDS,
 ])
 
 export function spansSurface(settings: PatternSettings): boolean {
@@ -449,6 +455,17 @@ export const PATTERN_LABELS: Record<PatternSettings['kind'], string> = {
   'classic-card': 'Classic test card',
   'levels-check': 'Levels check',
   'av-sync': 'AV sync',
+  mystify: 'Mystify',
+  beziers: 'Beziers',
+  curves: 'Curves and Colors',
+  'flying-windows': 'Flying Windows',
+  starfield: 'Flying Through Space',
+  marquee: 'Scrolling Marquee',
+  maze: '3D Maze',
+  pipes: '3D Pipes',
+  'flying-objects': '3D Flying Objects',
+  flowerbox: '3D FlowerBox',
+  'text-3d': '3D Text',
 }
 
 /**

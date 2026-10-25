@@ -273,7 +273,7 @@ export function HamsterControls({ opts, patch }: { opts: PatternSettings['hamste
   )
 }
 
-function Seed({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+export function Seed({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <div className="row seed">
       <Num label="Seed" value={value} min={0} onChange={onChange} />
@@ -456,6 +456,8 @@ const BASES: Exclude<PatternKind, 'broken-wall'>[] = [
   'spooky-forest',
   'haunted-house',
   'pumpkins',
+  'pipes',
+  'starfield',
   'classic-card',
   'image',
   'smpte-rp219',

@@ -2,6 +2,7 @@ import type { PatternSettings } from '../types'
 import { ALL_FAULTS } from '../patterns/broken'
 import { LINEUP_ORDER } from '../patterns/art/dinosaurs'
 import { PUMPKIN_FACES } from '../patterns/art/halloween'
+import { IDLE_AS_IT_RAN, IDLE_KINDS } from '../patterns/idle'
 
 /**
  * Starting settings.
@@ -124,6 +125,13 @@ export const DEFAULT_SETTINGS: PatternSettings = {
   },
 
   image: { fit: 'contain', anchorX: 'centre', anchorY: 'centre', background: '#000000', smoothing: true },
+
+  // Each idle pattern starts as it ran on the machine: Idler's own presets.
+  idle: {
+    seed: 1,
+    text: 'Test Card',
+    looks: Object.fromEntries(IDLE_KINDS.map((k) => [k, { ...IDLE_AS_IT_RAN[k] }])) as PatternSettings['idle']['looks'],
+  },
 
   overlay: {
     enabled: true,

@@ -29,6 +29,7 @@ import {
   spansSurface,
 } from '../patterns/render'
 import { isAnimated } from '../patterns/env'
+import { idleRenderFailures } from '../patterns/idle'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
 import { encodePlan, MAX_LOOP_BYTES, planBytes, planLoop, type EncodeRequest, type LoopPlan } from '../lib/video'
@@ -142,6 +143,18 @@ export default function App() {
     }
 
     type Job = { label: string; name: string; width: number; height: number; render: EncodeRequest['render'] }
+    // An idle pattern that could not be drawn (no WebGL2, or the context lost part
+    // way) paints a notice instead; in a loop nobody watches being made, that is a
+    // file of notices. Stop the export instead.
+    const strict =
+      (render: EncodeRequest['render']): EncodeRequest['render'] =>
+      (ctx, t) => {
+        const before = idleRenderFailures()
+        render(ctx, t)
+        if (idleRenderFailures() !== before) {
+          throw new Error('The idle pattern could not be drawn: this browser has no WebGL2, or lost its graphics context. Try again.')
+        }
+      }
     const composition = store.mode === 'composition'
     let jobs: Job[]
     if (composition) {
@@ -153,7 +166,7 @@ export default function App() {
           name: compositionFileName(store.projectName, settings, comp.widthPx, comp.heightPx, 'mp4'),
           width: comp.widthPx,
           height: comp.heightPx,
-          render: (ctx, t) => renderCompositionTo(ctx, store.outputs, comp, settings, t),
+          render: strict((ctx, t) => renderCompositionTo(ctx, store.outputs, comp, settings, t)),
         },
       ]
     } else {
@@ -163,7 +176,7 @@ export default function App() {
         name: outputFileName(output, settings, 'mp4'),
         width: output.widthPx,
         height: output.heightPx,
-        render: (ctx, t) => renderOutputTo(ctx, output, settings, t, store.composition),
+        render: strict((ctx, t) => renderOutputTo(ctx, output, settings, t, store.composition)),
       }))
     }
 
