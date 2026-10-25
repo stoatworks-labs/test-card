@@ -88,6 +88,8 @@ describe('the idle patterns', () => {
     })
   })
 
+  // Replays a few hundred frames of growth from cold: about 1.2 s on an M4 Max, over
+  // vitest's 5 s default on the deploy job's runner (2026-10-25), so it gets its own.
   it('grow the same way whether a frame is reached by playing or by jumping to it', () => {
     for (const kind of ['pipes', 'maze'] as const) {
       // Played: every frame in order up to 6 s. Jumped: 6 s cold, after a frame from another loop.
@@ -97,7 +99,7 @@ describe('the idle patterns', () => {
       const jumped = scene(kind, 6, 20)
       expect(meshDiff(played.mesh, jumped.mesh)).toBe(0)
     }
-  })
+  }, 30_000)
 
   it('start each loop well into a run, so the still is not an empty box', () => {
     // The box clears where the run restarts (0.4 of the loop), not at frame 0.
