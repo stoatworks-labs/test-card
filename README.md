@@ -1,7 +1,7 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 533 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 571 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
@@ -145,6 +145,21 @@ that time: each wave, each scrolling layer, each stride and wingbeat. Frame N wo
 the file goes round without a seam. The encoder is warmed up on the loop's last second before frame
 0, because otherwise it codes the first frame differently from all the others and the wrap shows.
 
+**Endless, for live output.** The generative ones (the idle savers, the hamsters, the ocean, the
+scroll, the volcano and the three Halloween patterns) have a switch under **Loop**. With it on,
+nothing is fitted to the loop and nothing comes round twice: every bat, witch, vampire, walker
+(zombie or skeleton), pterosaur, smoke puff and lava bomb is a new one each time it crosses or
+flies, each hamster tile picks a new dance every time round, the ghost picks a different window,
+each band of the sea rolls in with a shape of its own, and the twinkles, glows and sways drift out
+of step with each other. The savers run at Idler's own speeds, the stars and windows flying out of
+the middle come out on new paths, and 3D Pipes and 3D Maze build a new network every couple of
+minutes. The scenery still scrolls past on its own period, and the bats circling the haunted
+house's spire are the same seven, never in the same places twice; it's what moves through the
+scenery that's new. Live output and the preview run it for ever, every
+window in step on the computer's clock. It isn't a loop any more, so the button becomes
+**Download MP4 slice**: the loop's length of the run from the PNG's moment, named `…_slice.mp4`,
+which jumps if a media server plays it round.
+
 Colour is converted here with the Rec. 709 matrix into limited-range 4:2:0, and the file is
 labelled as such. The level range means what it does for a PNG: legal-range bars keep their
 sub-black and super-white in the video's footroom and headroom.
@@ -206,7 +221,8 @@ is rigged. In Chrome or Edge it lists the displays, gives each one the output th
 whatever you choose, or a raster the size of the display itself), and opens a window over each.
 Click a window and it goes full screen on its display, at 1:1 when the sizes match. The windows
 follow every change in the editor and keep running if the editor tab is reloaded. Moving patterns
-play live, and AV sync's beep plays from the first window.
+play live, the generative ones endless if you like (above), and AV sync's beep plays from the first
+window.
 
 Browsers allow one new window per click and only go full screen from a click in the window itself,
 so there's a click per display unless the site is allowed pop-ups. In other browsers you open a
@@ -302,6 +318,20 @@ for the invariants and the traps.
   graphics context left the pattern blank until a reload; and a slowed Mystify drew longer trails
   rather than slower ones. Not tried: Safari, Firefox, tiled 8K exports of them, Resolume, or a
   real wall.
+- **Endless:** `src/patterns/endless.test.ts` holds every generative painter different one, two
+  and seven loops on, a minute and years into the run; a crossing thing keeping its number all
+  the way across the picture; a walker a loop later standing where its slot puts one and being a
+  different one; a sea band continuous to within 0.01 px across the handover from one roll to the
+  next, four million rolls in; each endless scene drawing the same on each output of a span as on
+  the whole; and Pipes and Maze reseeded each run, with the replay never more than one run. With
+  the switch off every painter, saver, still and file name was compared draw for draw with the
+  commit before, and is identical. In Chrome (the app's browser pane) a 2 s endless MP4 slice of
+  the haunted house from 100 s came out as 60 frames, 2.000 s, its first frame within a code value
+  of the PNG at 100 s, and live-check still passes. An independent review before landing found the
+  scroll's far herd sliding with its legs still at Speed 1, twinkles and glows still coming round
+  every loop, skeletons barely changing between crossings and Idle's stars re-emerging on the same
+  rays, and two tests that couldn't fail; all fixed. Not tried: a live window left running for
+  days, Safari, Firefox, Resolume or a real wall.
 - **In Resolume:** Arena 7.28.1 (macOS 26.4.1) opened ocean, scroll and hamster loops at
   1920 × 1080 and an ocean at 3840 × 2160, all at 30 fps and exactly 10 s. Its output snapshot of
   frame 0 matched a BT.709 limited-range decode with a mean error of 0.90 code values at 1080p and

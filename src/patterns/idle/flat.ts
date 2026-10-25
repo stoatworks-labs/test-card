@@ -47,19 +47,23 @@ function bouncePoint(s: IdleSettings, seed: number, index: number, time: number,
  * Every object shares nearly one speed — in a real flight the perspective
  * divide supplies the difference — so the fitting rounds to the nearest rather
  * than spreading: on a short loop they all make the same number of runs.
+ * Endless, each run out of the middle is a new object, on a ray of its own
+ * from which run it is (`key`); its speed and timing stay the slot's.
  */
 function flyingPoint(s: IdleSettings, index: number, time: number, rate: number) {
-  const h = hash2(index >>> 0, s.seed)
+  const slot = hash2(index >>> 0, s.seed)
+  const offset = unit(hash2(slot, 0x6666))
+  const speed = fit(s, rate * (0.85 + unit(hash2(slot, 0x7777)) * 0.3))
+  let age = time * speed + offset
+  const run = Math.floor(age)
+  age -= run
+  const h = s.endless ? hash2(slot, run >>> 0) : slot
   const angle = unit(h) * TAU
   const radius = 0.15 + unit(hash2(h, 0x5555)) * 0.85
-  const offset = unit(hash2(h, 0x6666))
-  const speed = fit(s, rate * (0.85 + unit(hash2(h, 0x7777)) * 0.3))
-  let age = time * speed + offset
-  age -= Math.floor(age)
   // Far to near, never reaching zero: an object of infinite size for one frame is a full-screen flash.
   const z = 1 + (0.06 - 1) * age
   const scale = 0.35 / z
-  return { screen: { x: Math.cos(angle) * radius * scale, y: Math.sin(angle) * radius * scale }, scale, age }
+  return { screen: { x: Math.cos(angle) * radius * scale, y: Math.sin(angle) * radius * scale }, scale, age, key: h }
 }
 
 const fade = (c: V4, by: number): V4 => v4(c.x, c.y, c.z, c.w * by)
@@ -249,7 +253,7 @@ export class Starfield implements Saver {
 
     for (let i = 0; i < stars; i++) {
       const now = flyingPoint(s, i, s.time, rate)
-      const vary = 1 - s.variation * unit(hash3(i >>> 0, s.seed, 0xabcd)) * 0.7
+      const vary = 1 - s.variation * unit(s.endless ? hash2(now.key, 0xabcd) : hash3(i >>> 0, s.seed, 0xabcd)) * 0.7
       const arrival = Math.min(1, now.age / Math.max(1e-4, fadeIn))
       const brightness = Math.min(1, 0.25 + now.scale * 0.9) * vary * arrival
       const colour = settingsColour(s, v3(brightness, brightness, brightness), i, stars)
@@ -297,7 +301,7 @@ export class FlyingWindows implements Saver {
       const flight = flyingPoint(s, i, s.time, rate)
       const scale = logoUnit * flight.scale
       if (scale < 0.0005) continue
-      const vary = 1 - s.variation * unit(hash3(i >>> 0, s.seed, 0x5a5a)) * 0.6
+      const vary = 1 - s.variation * unit(s.endless ? hash2(flight.key, 0x5a5a) : hash3(i >>> 0, s.seed, 0x5a5a)) * 0.6
       // Fade in from the far plane and out at the near one, or a half-frame logo vanishes between frames.
       const alpha = Math.min(1, flight.age * 12) * Math.min(1, (1 - flight.age) * 6)
 

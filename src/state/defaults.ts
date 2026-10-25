@@ -72,7 +72,7 @@ export const DEFAULT_SETTINGS: PatternSettings = {
   // drawn with it says on the image that it is a guess.
   scale: { pitchMm: 2.6, units: 'metric', floorMm: 0, span: true },
 
-  animation: { seconds: 10, fps: '30', stillAtSeconds: 0, bitrateMbps: 0 },
+  animation: { seconds: 10, fps: '30', stillAtSeconds: 0, bitrateMbps: 0, endless: false },
 
   rulers: {
     top: true,

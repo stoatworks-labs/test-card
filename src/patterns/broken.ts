@@ -24,7 +24,7 @@ import type { BrokenFault, BrokenWallOptions } from '../types'
 import type { Ctx } from './draw'
 import type { EnvTile, PaintEnv } from './env'
 import { hash, rng } from './random'
-import { phase, wholeCycles } from './loop'
+import { cyclesPerLoop, phase, wholeCycles } from './loop'
 import { drawTooManyTiles } from './novelty'
 
 export const FAULT_LABELS: Record<BrokenFault, string> = {
@@ -337,15 +337,16 @@ function copyRect(from: Pixels, fromRect: IRect, to: Pixels, toRect: IRect) {
   }
 }
 
-/** Flicker brightness at time t: hard on/off, fast, a whole number of times per loop. */
-export function flickerLevel(t: number, loopSeconds: number, plan: FaultPlan): number {
-  const cycles = wholeCycles(loopSeconds * (6 + plan.b * 8))
+/** Flicker brightness at time t: hard on/off, fast, a whole number of times per loop (endless: its own rate). */
+export function flickerLevel(t: number, loopSeconds: number, plan: FaultPlan, endless = false): number {
+  const cycles = cyclesPerLoop(loopSeconds * (6 + plan.b * 8), endless)
   const p = phase(t, loopSeconds, cycles)
   return p < 0.35 + plan.c * 0.3 ? 0.2 : 1
 }
 
-/** Noise state at time t: a new pattern a dozen times a second, repeating with the loop. */
-export function noiseState(t: number, loopSeconds: number, seed: number): number {
+/** Noise state at time t: a new pattern a dozen times a second, repeating with the loop (endless: never). */
+export function noiseState(t: number, loopSeconds: number, seed: number, endless = false): number {
+  if (endless) return hash(seed, Math.floor(t * 12))
   const states = wholeCycles(loopSeconds * 12)
   return hash(seed, Math.floor(phase(t, loopSeconds, 1) * states) % states)
 }
@@ -399,8 +400,8 @@ export function drawBrokenWall(
       scale,
       partnerRect: p.partner !== undefined && tiles[p.partner] ? toDevice(tiles[p.partner]!) : undefined,
       frozen,
-      noiseState: noiseState(env.t, env.loopSeconds, hash(opts.seed, index)),
-      flickerLevel: flickerLevel(env.t, env.loopSeconds, p),
+      noiseState: noiseState(env.t, env.loopSeconds, hash(opts.seed, index), env.endless),
+      flickerLevel: flickerLevel(env.t, env.loopSeconds, p, env.endless),
     })
   }
   now.ctx.putImageData(now.pixels, 0, 0)

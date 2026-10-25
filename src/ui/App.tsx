@@ -27,8 +27,9 @@ import {
   renderOutputTo,
   setPatternImage,
   spansSurface,
+  stillTime,
 } from '../patterns/render'
-import { isAnimated } from '../patterns/env'
+import { endlessOn, isAnimated } from '../patterns/env'
 import { idleRenderFailures } from '../patterns/idle'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
@@ -49,6 +50,7 @@ export default function App() {
   const selected = store.outputs.find((o) => o.id === store.selectedId) ?? store.outputs[0] ?? null
   const enabled = store.outputs.filter((o) => o.enabled)
   const moving = isAnimated(store.settings)
+  const endless = endlessOn(store.settings)
   const setImage = store.setImage
 
   // Bring back the picture the image pattern was showing before a refresh.
@@ -146,11 +148,14 @@ export default function App() {
     // An idle pattern that could not be drawn (no WebGL2, or the context lost part
     // way) paints a notice instead; in a loop nobody watches being made, that is a
     // file of notices. Stop the export instead.
+    // An endless pattern has no loop to export, so the MP4 is a slice of the run
+    // starting at the PNG's moment: the frames from there, which do not loop.
+    const sliceFrom = endlessOn(settings) ? stillTime(settings).t : 0
     const strict =
       (render: EncodeRequest['render']): EncodeRequest['render'] =>
       (ctx, t) => {
         const before = idleRenderFailures()
-        render(ctx, t)
+        render(ctx, sliceFrom + t)
         if (idleRenderFailures() !== before) {
           throw new Error('The idle pattern could not be drawn: this browser has no WebGL2, or lost its graphics context. Try again.')
         }
@@ -407,10 +412,12 @@ export default function App() {
                           ? 'Download composition MP4 tiles (ZIP)'
                           : 'Download composition MP4'
                         : enabled.length > 1
-                          ? `Download ZIP of ${enabled.length} MP4 loops${tiling.length ? ', some as tiles' : ''}`
+                          ? `Download ZIP of ${enabled.length} MP4 ${endless ? 'slices' : 'loops'}${tiling.length ? ', some as tiles' : ''}`
                           : tiling.length
                             ? 'Download MP4 tiles (ZIP)'
-                            : 'Download MP4 loop'}
+                            : endless
+                              ? 'Download MP4 slice'
+                              : 'Download MP4 loop'}
                     </button>
                   ) : null}
                   <button
@@ -430,7 +437,13 @@ export default function App() {
           </div>
           {liveOpen ? <LivePanel onClose={() => setLiveOpen(false)} /> : null}
 
-          {moving ? (
+          {moving && endless ? (
+            <p className="hint">
+              An endless pattern, for live output: it never repeats. The MP4 is a slice of it from{' '}
+              {store.settings.animation.stillAtSeconds} s, encoded here in the browser, and does not loop; the PNG
+              is its first frame.
+            </p>
+          ) : moving ? (
             <p className="hint">
               A moving pattern. The MP4 is a seamless H.264 loop, encoded here in the browser; the
               PNG is the frame at {store.settings.animation.stillAtSeconds} s.

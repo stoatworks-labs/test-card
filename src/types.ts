@@ -296,6 +296,13 @@ export type AnimationOptions = {
   stillAtSeconds: number
   /** Megabits per second for the MP4. 0 = pick from the raster. */
   bitrateMbps: number
+  /**
+   * Endless, for live output: a generative pattern (the idle savers, the hamsters,
+   * the moving scenes, the Halloween ones) stops fitting itself to the loop and
+   * never repeats. The MP4 is then a slice of the run, from the PNG's moment, and
+   * does not loop. See `endlessOn` in patterns/env.ts.
+   */
+  endless: boolean
 }
 
 export type RulerOptions = {

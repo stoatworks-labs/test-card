@@ -21,8 +21,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Output, PatternSettings, RenderMode } from '../types'
 import { canvasLimitProblem, renderComposition, renderCompositionTo, renderOutputTo } from '../patterns/render'
-import { isAnimated } from '../patterns/env'
-import { loopTiming } from '../patterns/loop'
+import { endlessOn, isAnimated } from '../patterns/env'
+import { endlessTime, loopTiming } from '../patterns/loop'
+import { unixMs } from '../live/clock'
 
 const MAX_PREVIEW_PX = 1400
 
@@ -108,11 +109,13 @@ export function Preview({
     }
     const loop = loopTiming(settings.animation).seconds
     const start = performance.now()
+    // Endless runs on the clock the live windows use, so the preview shows what they do.
+    const endless = endlessOn(settings)
     let raf = 0
     const tick = (now: number) => {
-      const t = ((now - start) / 1000) % loop
+      const t = endless ? endlessTime(unixMs(now)) : ((now - start) / 1000) % loop
       draw(t)
-      if (clock.current) clock.current.textContent = `${t.toFixed(2)} / ${loop.toFixed(2)} s`
+      if (clock.current) clock.current.textContent = endless ? 'endless, live only' : `${t.toFixed(2)} / ${loop.toFixed(2)} s`
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)

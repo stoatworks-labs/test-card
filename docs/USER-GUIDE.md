@@ -272,6 +272,31 @@ frame at **PNG shows the frame at (s)**. Pause the preview to see which frame th
   them at those positions and play them together. A bitrate you've set is shared between the
   tiles; auto is worked out per tile.
 
+**Endless, for live output.** The generative patterns (the idle savers, the hamsters, the ocean, the
+dinosaur scroll, the volcano, the pumpkin patch, the spooky forest and the haunted house) have one
+more switch under **Loop**: **Endless, for live output**. A loop has to come back round to where it
+started; a live output doesn't, so with this on nothing is fitted to the loop and nothing comes
+round twice:
+
+- Every bat, witch, vampire and pterosaur is a new one each time it crosses: where it flies, its
+  size, how it looks. In the graveyard each one walking past is a zombie or a skeleton afresh, at
+  its own height and nearness. Nothing changes while it's on the picture.
+- Each smoke puff and lava bomb is new, each band of the sea rolls in with a shape of its own, each
+  hamster tile picks a new dance every time round, the ghost picks a different window, and the
+  twinkles, glows and sways drift out of step with each other.
+- The idle savers run at Idler's own speeds, and the stars and windows flying out of the middle
+  come out on new paths each time. 3D Pipes and 3D Maze build a new network from a seed of their
+  own every couple of minutes of the saver's time, so they never build the same one twice.
+- The scenery (the hills, the trees, the stones) still scrolls past on its own period, and the bats
+  circling the haunted house's spire are the same seven, never in the same places twice. It's what
+  moves through the scenery that's new.
+
+Live output and the preview run it for ever, and every window works out where it is from the
+computer's clock, so a span stays in step. Because it isn't a loop any more, the button becomes
+**Download MP4 slice**: the loop's length of the run starting at **PNG shows the frame at (s)**,
+named `…_slice.mp4`. It's for a preview or a social post, not a media server: played round, it
+jumps. AV sync doesn't get the switch. It's a measurement, and it has to be a loop.
+
 **In Resolume.** Arena 7.28.1 plays them at the right size, rate and length, with the right colour,
 and loops them without dropping or repeating a frame. The catch: an H.264 clip triggered from cold
 often plays for about half a second and then holds that picture until its first wrap. That's
@@ -336,7 +361,9 @@ Once they're up:
 - In a window, **Esc** leaves full screen and **I** shows or hides the info. The pointer hides
   itself once it's full screen.
 - Moving patterns play live. Every window works out where it is in the loop from the computer's
-  clock, so a scene spanning several outputs stays in step across them.
+  clock, so a scene spanning several outputs stays in step across them. An endless one (see
+  **Moving patterns**) has no loop to be in: each window works out where it is in the run from the
+  same clock, so they still agree, and never come round.
 - AV sync's beep comes from the first window opened, once it's been clicked (a browser won't make a
   sound before that). The sound is put back in step with the picture every time round the loop.
 - A live window stops the display going to sleep. Where the browser won't allow that (on plain

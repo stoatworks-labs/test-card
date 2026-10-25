@@ -89,11 +89,28 @@ export function ScaleControls({
   )
 }
 
-export function LoopControls({ opts, patch }: { opts: PatternSettings['animation']; patch: Patch }) {
+export function LoopControls({
+  opts,
+  patch,
+  endlessable = false,
+}: {
+  opts: PatternSettings['animation']
+  patch: Patch
+  /** Whether this pattern can run endless (`canRunEndless`): only then is the switch offered. */
+  endlessable?: boolean
+}) {
   const t = loopTiming(opts)
+  const endless = endlessable && opts.endless
   return (
     <>
       <h3>Loop</h3>
+      {endlessable ? (
+        <Check
+          label="Endless, for live output (never repeats; the MP4 is a slice that does not loop)"
+          checked={opts.endless}
+          onChange={(v) => patch({ endless: v })}
+        />
+      ) : null}
       <div className="row">
         <Num label="Length (s)" value={opts.seconds} min={1} max={600} onChange={(seconds) => patch({ seconds })} />
         <Field label="Frame rate">
@@ -106,10 +123,18 @@ export function LoopControls({ opts, patch }: { opts: PatternSettings['animation
           </select>
         </Field>
       </div>
-      <p className="hint">
-        {t.frames} frames, {t.seconds.toFixed(3)} s. Everything that moves does a whole number of
-        cycles in that time, so the MP4 loops with no seam.
-      </p>
+      {endless ? (
+        <p className="hint">
+          Endless: nothing is fitted to the loop and nothing comes round twice. Live output and the
+          preview run it for ever, every window in step. The MP4 is {t.frames} frames ({t.seconds.toFixed(3)} s)
+          of it from the PNG’s moment, and does NOT loop: played round, it jumps.
+        </p>
+      ) : (
+        <p className="hint">
+          {t.frames} frames, {t.seconds.toFixed(3)} s. Everything that moves does a whole number of
+          cycles in that time, so the MP4 loops with no seam.
+        </p>
+      )}
       <div className="row">
         <Num
           label="PNG shows the frame at (s)"

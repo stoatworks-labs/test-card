@@ -32,7 +32,8 @@ src/patterns/render.ts orchestration, canvas limits, PNG encode, composition mod
                       and makeEnv(): time, pitch, and where a canvas sits on a span
 src/patterns/env.ts   PaintEnv — what a painter is told besides its size
 src/patterns/scale.ts pitch resolution, ruler ticks (pure)
-src/patterns/loop.ts  loop timing in whole frames, whole cycles per loop (pure)
+src/patterns/loop.ts  loop timing in whole frames, whole cycles per loop (pure), and endless's
+                      clock: endlessTime, cyclesPerLoop, lapNumber (see invariant 8)
 src/patterns/random.ts seeded randomness; the only randomness patterns may use
 src/patterns/novelty.ts rulers, bananas, life-size dinosaurs, hamsters
 src/patterns/scenes.ts ocean, dinosaur scroll, volcano — the moving scenes
@@ -131,6 +132,25 @@ loop, forever. The idle savers come from Idler, where nothing is periodic: every
 rate in them goes through `fit`, `fitSpread` or `orbit` in `idle/common.ts`, and
 the two that grow restart once a loop (`runTime`). `idle.test.ts` compares the
 meshes at t = 0 and t = T for every saver.
+
+*Except endless, on purpose.* With `animation.endless` on, a generative pattern
+(`endlessOn` in env.ts: the idle savers, hamsters, ocean, scroll, volcano, pumpkins,
+forest, house) gets `env.endless` and is NOT a loop: it never comes round. Use
+`cyclesPerLoop(natural, env.endless)` wherever `wholeCycles` would go. Anything that
+comes round (a crossing, a launch, a band, a dance, a run) is seeded from which time
+round it is (`lapX` + `eachRepeatIndexed`, `lapNumber`, `runSeed`) and may change only
+while it can't be seen. With the switch off, every pattern must draw byte for byte as
+before: draw every slot's random numbers in the same order whether or not endless then
+overrides them. A small ambient motion the loop gave a whole number of cycles (a twinkle,
+a bob, a glow) goes through `freeCycles`, so they drift out of step rather than coming round
+together. In the idle port, `s.endless` (never set by `check-idle-port`) gives each flying
+star or window a new ray every run out of the middle. Endless t is seconds since 2026 on the
+shared clock and runs to 1e8 and more, so never multiply it by a rate that itself changes
+over time: the sea's waves,
+whose speed depends on a band's depth, spun faster every year until they were timed by
+the band's own age instead. Pipes and Maze run in `ENDLESS_RUN_SECONDS` runs, which keeps
+a replay to one run however late it is. An endless MP4 is a slice from `stillTime`,
+named `_slice`, and does not loop. AV sync is a measurement and never endless.
 
 **9. No `Math.random` in `src/patterns/`.**
 A pattern is a function of its settings, its output and the time. Use the
@@ -390,7 +410,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 533 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 571 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with
@@ -409,6 +429,12 @@ hand-written:
 
 If you change an importer, regenerate the fixture from the sibling project rather
 than editing the XML by hand.
+
+`src/patterns/endless.test.ts` holds endless: every generative painter different a loop,
+two and seven loops on (a minute and years into the run), a crossing thing keeping its
+number across the picture, a sea band continuous across the handover between rolls, each
+endless scene agreeing between a span's outputs and the whole, Pipes and Maze reseeded each
+run, and every painter unchanged with the switch off.
 
 `test/recording-context.ts` is a pretend 2D context that records every fill,
 stroke and text in device space, with the transform and save/restore stack kept

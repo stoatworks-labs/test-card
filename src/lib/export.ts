@@ -11,8 +11,8 @@ import type { Output, PatternSettings } from '../types'
 import { buildZip, uniqueNames, type ZipEntry } from './zip'
 import { loopTiming } from '../patterns/loop'
 import { resolvePitch } from '../patterns/scale'
-import { isAnimated, isScaleAware } from '../patterns/env'
-import { canvasRange } from '../patterns/render'
+import { endlessOn, isAnimated, isScaleAware } from '../patterns/env'
+import { canvasRange, stillTime } from '../patterns/render'
 
 /** Filesystem-safe, lower-case, no runs of separators. */
 export function slug(text: string): string {
@@ -72,7 +72,8 @@ function loopSuffix(settings: PatternSettings, kind: FileKind): string {
   if (kind !== 'mp4') return ''
   // "29.97" -> "29p97", the way frame rates are usually written in filenames.
   const secs = String(Math.round(loopTiming(settings.animation).seconds * 100) / 100)
-  return `_${settings.animation.fps.replace('.', 'p')}fps_${secs.replace('.', 'p')}s`
+  // An endless pattern's MP4 is a slice that does not loop, and its name says so.
+  return `_${settings.animation.fps.replace('.', 'p')}fps_${secs.replace('.', 'p')}s${endlessOn(settings) ? '_slice' : ''}`
 }
 
 export function outputFileName(output: Output, settings: PatternSettings, kind: FileKind = 'png'): string {
@@ -114,7 +115,7 @@ export type TiledLoop = {
 }
 
 export function zipFileName(projectName: string, settings: PatternSettings, kind: FileKind = 'png'): string {
-  return `${slug(projectName)}_${PATTERN_SLUGS[settings.kind]}_${kind === 'mp4' ? 'loops' : 'patterns'}.zip`
+  return `${slug(projectName)}_${PATTERN_SLUGS[settings.kind]}_${kind === 'mp4' ? (endlessOn(settings) ? 'slices' : 'loops') : 'patterns'}.zip`
 }
 
 /**
@@ -143,7 +144,9 @@ export function buildManifest(
   if (kind === 'mp4') {
     const t = loopTiming(settings.animation)
     lines.push(
-      `Loop:     ${t.frames} frames at ${settings.animation.fps} fps = ${t.seconds.toFixed(4)} s, seamless`,
+      endlessOn(settings)
+        ? `Slice:    ${t.frames} frames at ${settings.animation.fps} fps = ${t.seconds.toFixed(4)} s of the endless run, from ${stillTime(settings).t} s. NOT a loop: it jumps where it starts again`
+        : `Loop:     ${t.frames} frames at ${settings.animation.fps} fps = ${t.seconds.toFixed(4)} s, seamless`,
       'Video:    H.264, BT.709 Y′CbCr 4:2:0, limited (video) range, flagged in the file',
     )
   } else if (isAnimated(settings)) {
@@ -186,7 +189,7 @@ export function buildManifest(
     lines.push(
       '',
       "VIDEO TILES: this browser's H.264 encoder would not take these rasters as one",
-      'video, so each is cut into a grid of tiles, every one a loop of the same length.',
+      `video, so each is cut into a grid of tiles, every one a ${endlessOn(settings) ? 'slice' : 'loop'} of the same length.`,
       'Put each tile at its x, y in the full raster and play them together; side by side',
       'they are the whole picture, frame for frame.',
     )

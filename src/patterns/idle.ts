@@ -150,12 +150,30 @@ export function hexToRgb(hex: string): V3 {
 }
 
 /**
+ * How long one run of 3D Pipes or 3D Maze lasts when endless, in saver seconds.
+ * Idler's own never restart, but they grow by replay from the start of the run,
+ * so an endless one has to: each run is a new network from a seed of its own.
+ * Two minutes at Idler's speed is long enough to fill a box of pipes, which
+ * clears itself as Idler's does, and a few hundred ticks to replay.
+ */
+export const ENDLESS_RUN_SECONDS = 120
+
+/**
  * The controls, converted, at loop time `t`. Speed scales saver time, and the
  * loop in saver time with it, so whatever is fitted to the period is still
  * periodic in the real loop. Stopped (speed 0) holds the moment t = 0 shows,
  * not saver time zero, so a stopped 3D Pipes is a grown network, not an empty box.
+ * Endless, nothing is fitted (period 0, Idler's own rates) and Pipes and Maze
+ * grow a new network every `ENDLESS_RUN_SECONDS`.
  */
-export function idleSettings(kind: IdleKind, opts: IdleOptions, aspect: number, t: number, loopSeconds: number): IdleSettings {
+export function idleSettings(
+  kind: IdleKind,
+  opts: IdleOptions,
+  aspect: number,
+  t: number,
+  loopSeconds: number,
+  endless = false,
+): IdleSettings {
   const l = opts.looks[kind] ?? IDLE_AS_IT_RAN[kind]
   const speed = speedFromParam(l.speed)
   return {
@@ -167,7 +185,8 @@ export function idleSettings(kind: IdleKind, opts: IdleOptions, aspect: number, 
     variation: clamp01(l.variation),
     shading: SHADING[l.shading] ?? Shading.Lit,
     time: speed > 0 ? t * speed : 0,
-    period: loopSeconds * (speed > 0 ? speed : 1),
+    period: endless ? 0 : loopSeconds * (speed > 0 ? speed : 1),
+    ...(endless ? { run: ENDLESS_RUN_SECONDS, endless: true } : {}),
     seed: Math.trunc(Math.abs(opts.seed)) >>> 0,
     fov: fovFromParam(l.fov),
     camDistance: clamp01(l.camDistance),
@@ -213,7 +232,7 @@ export function idleMoves(kind: IdleKind, opts: IdleOptions): boolean {
 export function drawIdle(ctx: Ctx, w: number, h: number, kind: IdleKind, opts: IdleOptions, env: PaintEnv) {
   const l = opts.looks[kind] ?? IDLE_AS_IT_RAN[kind]
   const background = hexToRgb(l.background)
-  const s = idleSettings(kind, opts, env.world.widthPx / env.world.heightPx, env.t, env.loopSeconds)
+  const s = idleSettings(kind, opts, env.world.widthPx / env.world.heightPx, env.t, env.loopSeconds, env.endless)
   const scene = buildIdleScene(kind, s, background)
   const css = `rgb(${Math.round(background.x * 255)}, ${Math.round(background.y * 255)}, ${Math.round(background.z * 255)})`
 

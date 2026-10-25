@@ -17,8 +17,8 @@
 import type { OceanOptions, SceneOptions } from '../types'
 import type { Ctx } from './draw'
 import type { PaintEnv } from './env'
-import { between, hash, rng } from './random'
-import { phase, wholeCycles } from './loop'
+import { between, hash, pick, rng } from './random'
+import { cyclesPerLoop, freeCycles, lapNumber, phase } from './loop'
 import { fillShapes, mapShapes, type Pt, type Shape } from './art/shapes'
 import {
   cloud,
@@ -69,6 +69,13 @@ export type SeaBand = { pts: Pt[]; depth: number; y: number }
  * about a band — height, wavelength, phase — is a smooth function of u, not
  * of k, so when τ wraps band k lands exactly where band k+1 started and the
  * sea is identical. That is what makes the loop seamless.
+ *
+ * Endless, the roll and the waves go at their own speeds, and each band also
+ * takes a phase of its own from which band it is (k less the rolls so far,
+ * which stays the same as it rolls in), so every band born at the horizon is a
+ * new one and the sea never comes round. Its waves travel by its own age (u, in
+ * rolls) rather than the clock: their speed changes with depth, and a speed
+ * that changes times the time since 2026 would spin them faster every year.
  */
 export function seaBands(
   seed: number,
@@ -79,6 +86,7 @@ export function seaBands(
   t: number,
   loopSeconds: number,
   step: number,
+  endless = false,
 ): SeaBand[] {
   const W = world.heightPx
   const horizon = world.heightPx * 0.42
@@ -92,8 +100,9 @@ export function seaBands(
     p2: between(r, 0.6, 1.4),
     p3: r() * TAU,
   }))
-  const roll = wholeCycles(loopSeconds / 1.6)
+  const roll = cyclesPerLoop(loopSeconds / 1.6, endless)
   const tau = phase(t, loopSeconds, roll)
+  const rolled = endless ? lapNumber(t, loopSeconds, roll) : 0
   const bands: SeaBand[] = []
   // A band is born at the horizon with no height at all, and kept until even
   // its highest crest is below the bottom edge. Dropping one any earlier makes
@@ -108,15 +117,18 @@ export function seaBands(
     const amp = W * 0.022 * opts.swell * (s + 0.05 * Math.min(1, u))
     if (y - amp * peak > world.heightPx) break
     const lambda = W * (0.04 + 0.75 * s)
+    const own = endless ? rng(hash(seed, 9, k - rolled)) : null
+    const shift = comps.map(() => (own ? own() * TAU : 0))
     const pts: Pt[] = []
     // Sample on a grid anchored to the world, not to this canvas, so two
     // outputs of one surface draw the same curve through the same points.
     for (let x = Math.floor(x0 / step) * step; x <= x1 + step; x += step) {
       let v = 0
       comps.forEach((c, i) => {
-        const cyc = wholeCycles(loopSeconds / (1.4 + 2.2 * Math.sqrt(c.lam * (0.3 + s))))
-        const ph = c.p1 + Math.sin(u * 0.37 * c.p2 + c.p3) * 2.5 + u * 1.3 * (i + 1)
-        v += c.amp * Math.sin((TAU * x) / (lambda * c.lam) + ph + c.dir * TAU * phase(t, loopSeconds, cyc))
+        const cyc = cyclesPerLoop(loopSeconds / (1.4 + 2.2 * Math.sqrt(c.lam * (0.3 + s))), endless)
+        const ph = c.p1 + Math.sin(u * 0.37 * c.p2 + c.p3) * 2.5 + u * 1.3 * (i + 1) + shift[i]!
+        const travel = endless ? (cyc * u) / roll : phase(t, loopSeconds, cyc)
+        v += c.amp * Math.sin((TAU * x) / (lambda * c.lam) + ph + c.dir * TAU * travel)
       })
       pts.push([x, y - amp * v])
     }
@@ -150,7 +162,7 @@ export function drawOcean(ctx: Ctx, w: number, h: number, opts: OceanOptions, en
     for (let i = 0; i < stars; i++) {
       const x = sr() * WW
       const y = sr() * horizon * 0.95
-      const tw = 0.55 + 0.45 * Math.sin(TAU * phase(env.t, env.loopSeconds, 1 + (i % 4)) + i)
+      const tw = 0.55 + 0.45 * Math.sin(TAU * phase(env.t, env.loopSeconds, freeCycles(1 + (i % 4), env.endless, i)) + i)
       ctx.globalAlpha = tw * between(sr, 0.4, 1)
       ctx.fillStyle = '#ffffff'
       const s = between(sr, 0.6, 1.8) * Math.max(1, WH / 1080)
@@ -176,7 +188,7 @@ export function drawOcean(ctx: Ctx, w: number, h: number, opts: OceanOptions, en
     const cr = rng(hash(opts.seed, 4))
     const n = 3 + Math.floor(cr() * 3)
     for (let i = 0; i < n; i++) {
-      const bob = Math.sin(TAU * phase(env.t, env.loopSeconds, 1) + i) * WH * 0.004
+      const bob = Math.sin(TAU * phase(env.t, env.loopSeconds, freeCycles(1, env.endless, 80 + i)) + i) * WH * 0.004
       fillShapes(ctx, cloud(cr() * WW, horizon * between(cr, 0.25, 0.75) + bob, WH * between(cr, 0.18, 0.32), opts.seed + i, mix(pal.skyLow, '#ffffff', 0.55)))
     }
   }
@@ -190,7 +202,7 @@ export function drawOcean(ctx: Ctx, w: number, h: number, opts: OceanOptions, en
   ctx.fillRect(env.view.x, horizon, w, WH - horizon + 1)
 
   const step = Math.max(3, Math.round(WH / 270))
-  const bands = seaBands(opts.seed, opts, env.world, x0, x1, env.t, env.loopSeconds, step)
+  const bands = seaBands(opts.seed, opts, env.world, x0, x1, env.t, env.loopSeconds, step, env.endless)
   for (const band of bands) {
     const body = mix(pal.far, pal.near, Math.min(1, band.depth * 1.1))
     const face = mix(body, pal.crest, 0.35 + 0.25 * (1 - band.depth))
@@ -242,7 +254,7 @@ export function drawOcean(ctx: Ctx, w: number, h: number, opts: OceanOptions, en
     const y = horizon + (WH - horizon) * f ** 1.6
     const spread = WH * (0.02 + 0.3 * f)
     const x = sunX + between(gr, -1, 1) * spread
-    const a = Math.sin(TAU * phase(env.t, env.loopSeconds, 2 + (i % 5)) + gr() * TAU)
+    const a = Math.sin(TAU * phase(env.t, env.loopSeconds, freeCycles(2 + (i % 5), env.endless, 100 + i)) + gr() * TAU)
     if (a <= 0.2 || x < x0 || x > x1) continue
     ctx.globalAlpha = (a - 0.2) * 1.2
     const len = WH * (0.004 + 0.02 * f)
@@ -262,9 +274,10 @@ export function drawOcean(ctx: Ctx, w: number, h: number, opts: OceanOptions, en
  */
 export const LAYER_DEPTHS = [0.25, 0.45, 0.7, 1.0, 1.3] as const
 
-export function layerWidths(speed: number): number[] {
+export function layerWidths(speed: number, endless = false): number[] {
   const s = Math.max(1, Math.min(20, speed))
-  return LAYER_DEPTHS.map((d) => Math.max(1, Math.round(s * d)))
+  // Endless, nothing has to come round, so each layer scrolls at its depth's own speed.
+  return LAYER_DEPTHS.map((d) => (endless ? s * d : Math.max(1, Math.round(s * d))))
 }
 
 /** A layer's scroll offset at time t, in world pixels, 0 <= offset < period. */
@@ -276,6 +289,26 @@ export function layerOffset(widthsPerLoop: number, period: number, t: number, lo
 export function eachRepeat(x: number, period: number, x0: number, x1: number, draw: (x: number) => void) {
   const first = x - Math.ceil((x - x0) / period) * period
   for (let p = first; p <= x1; p += period) draw(p)
+}
+
+/**
+ * As `eachRepeat`, numbering the repeats: `k` is how many periods from `x`
+ * this one is. With `x` from `lapX` on an endless pattern, a thing crossing
+ * the picture keeps its `k` all the way across and the next one has the next,
+ * so whatever is seeded from `k` is a new one each time round.
+ */
+export function eachRepeatIndexed(x: number, period: number, x0: number, x1: number, draw: (x: number, k: number) => void) {
+  const before = Math.ceil((x - x0) / period)
+  for (let k = -before; x + k * period <= x1; k++) draw(x + k * period, k)
+}
+
+/**
+ * Where something that laps the world once a loop is, `baseX` at t = 0 and going
+ * `dir`. Looping, wrapped into one lap. Endless, NOT wrapped: it is where the
+ * first of its repeats has got to, so `eachRepeatIndexed` can tell them apart.
+ */
+export function lapX(env: Pick<PaintEnv, 't' | 'loopSeconds' | 'endless'>, baseX: number, dir: number, lap: number): number {
+  return baseX + dir * lap * (env.endless ? env.t / env.loopSeconds : phase(env.t, env.loopSeconds, 1))
 }
 
 type Walker = { id: DinosaurId; x: number; layer: number; drift: number }
@@ -290,7 +323,7 @@ const LAYER_M = [0, 0, 0.0085, 0.03, 0]
 export function drawDinoScroll(ctx: Ctx, w: number, h: number, opts: SceneOptions, env: PaintEnv) {
   const { widthPx: WW, heightPx: WH } = env.world
   const T = env.loopSeconds
-  const widths = layerWidths(opts.speed)
+  const widths = layerWidths(opts.speed, env.endless)
   const r = rng(hash(opts.seed, 11))
   const haze = '#d9ecf2'
   ctx.save()
@@ -313,19 +346,30 @@ export function drawDinoScroll(ctx: Ctx, w: number, h: number, opts: SceneOption
 
   const cr = rng(hash(opts.seed, 12))
   for (let i = 0; i < 4; i++) {
-    const bob = Math.sin(TAU * phase(env.t, T, 1) + i * 1.7) * WH * 0.004
+    const bob = Math.sin(TAU * phase(env.t, T, freeCycles(1, env.endless, 80 + i)) + i * 1.7) * WH * 0.004
     fillShapes(ctx, cloud(cr() * WW, WH * between(cr, 0.1, 0.32) + bob, WH * between(cr, 0.15, 0.28), opts.seed * 7 + i, '#ffffff'))
   }
 
-  // Pterosaurs, crossing the sky once per loop and wrapping.
+  // Pterosaurs, crossing the sky once per loop and wrapping. Endless, a new one each crossing.
   const pr = rng(hash(opts.seed, 13))
   for (let i = 0; i < 3; i++) {
     const baseX = pr() * WW
     const y = WH * between(pr, 0.12, 0.35)
     const span = WH * between(pr, 0.05, 0.09)
-    const flap = phase(env.t, T, wholeCycles(T / between(pr, 0.6, 0.9)))
-    const x = baseX + phase(env.t, T, 1) * WW
-    eachRepeat(x, WW, x0, x1, (px) => fillShapes(ctx, pterosaur(px, y + Math.sin(TAU * flap) * span * 0.08, span, flap, mix('#3d3a5a', haze, 0.25))))
+    const beat = between(pr, 0.6, 0.9)
+    const colour = mix('#3d3a5a', haze, 0.25)
+    const draw = (px: number, cy: number, cs: number, cBeat: number) => {
+      const flap = phase(env.t, T, cyclesPerLoop(T / cBeat, env.endless))
+      fillShapes(ctx, pterosaur(px, cy + Math.sin(TAU * flap) * cs * 0.08, cs, flap, colour))
+    }
+    if (env.endless) {
+      eachRepeatIndexed(lapX(env, baseX, 1, WW), WW, x0, x1, (px, k) => {
+        const c = rng(hash(opts.seed, 14, i, k))
+        draw(px, WH * between(c, 0.12, 0.35), WH * between(c, 0.05, 0.09), between(c, 0.6, 0.9))
+      })
+    } else {
+      eachRepeat(baseX + phase(env.t, T, 1) * WW, WW, x0, x1, (px) => draw(px, y, span, beat))
+    }
   }
 
   // Layer 0: far mountains with snow. Layer 1: nearer hills.
@@ -361,24 +405,45 @@ export function drawDinoScroll(ctx: Ctx, w: number, h: number, opts: SceneOption
     { id: 'velociraptor', x: WW * 0.6, layer: 3, drift: 1 },
     { id: 'compsognathus', x: WW * 0.28, layer: 3, drift: 1 },
   ]
+  // Endless, an animal that crosses the picture (one that drifts) is a new one each
+  // time: a species from those that walk with it, from which crossing it is.
+  const crossers: Record<number, DinosaurId[]> = { 2: ['brachiosaurus', 'stegosaurus', 'triceratops'], 3: ['velociraptor', 'compsognathus'] }
+  // A drifting animal's pace over the ground is the loop's whatever the scroll does:
+  // endless, its layer scrolls at its own speed, so its drift across the picture is
+  // the loop's walk less that. (Kept at the loop's whole -1, the herd at Speed 1
+  // walked 0.3 widths backwards a loop and slid with its legs still.)
+  const loopWidths = layerWidths(opts.speed)
+  const driftOf = (wk: Walker) => (env.endless && wk.drift !== 0 ? loopWidths[wk.layer]! + wk.drift - widths[wk.layer]! : wk.drift)
   const drawWalkers = (layer: number, groundY: number) => {
-    for (const wk of walkers.filter((k) => k.layer === layer)) {
-      const sp = SPECIES[wk.id]
+    walkers.forEach((wk, i) => {
+      if (wk.layer !== layer) return
       const pxPerM = WH * LAYER_M[layer]!
       // Distance walked over the ground per loop: the layer's scroll plus the drift.
-      const walked = (widths[layer]! + wk.drift) * WW
-      const strides = walked > 0 ? wholeCycles(walked / (sp.stride * pxPerM)) : 0
-      const gait = strides ? phase(env.t, T, strides) : null
-      const x = wk.x + wk.drift * phase(env.t, T, 1) * WW
-      const strideM = strides ? walked / strides / pxPerM : sp.stride
-      const shapes = scaleDino(poseDinosaur(sp, gait, strideM), pxPerM)
-      eachRepeat(x, WW, x0 - 30 * pxPerM, x1 + 30 * pxPerM, (px) => {
+      const walked = (widths[layer]! + driftOf(wk)) * WW
+      const shapesOf = (id: DinosaurId) => {
+        const sp = SPECIES[id]
+        const strides = walked > 0 ? cyclesPerLoop(walked / (sp.stride * pxPerM), env.endless) : 0
+        const gait = strides ? phase(env.t, T, strides) : null
+        const strideM = strides ? walked / strides / pxPerM : sp.stride
+        const shapes = scaleDino(poseDinosaur(sp, gait, strideM), pxPerM)
+        return layer < 3 ? mapColours(shapes, haze, 0.35) : shapes
+      }
+      const place = (px: number, shapes: Shape[]) => {
         ctx.save()
         ctx.translate(px, groundY)
-        fillShapes(ctx, layer < 3 ? mapColours(shapes, haze, 0.35) : shapes)
+        fillShapes(ctx, shapes)
         ctx.restore()
-      })
-    }
+      }
+      if (env.endless && wk.drift !== 0) {
+        eachRepeatIndexed(lapX(env, wk.x, driftOf(wk), WW), WW, x0 - 30 * pxPerM, x1 + 30 * pxPerM, (px, k) => {
+          const pool = crossers[layer] ?? [wk.id]
+          place(px, shapesOf(pick(rng(hash(opts.seed, 15, i, k)), pool)))
+        })
+      } else {
+        const shapes = shapesOf(wk.id)
+        eachRepeat(wk.x + wk.drift * phase(env.t, T, 1) * WW, WW, x0 - 30 * pxPerM, x1 + 30 * pxPerM, (px) => place(px, shapes))
+      }
+    })
   }
   drawWalkers(2, ground2)
 
@@ -469,7 +534,7 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
   for (let i = 0; i < stars; i++) {
     const x = sr() * WW
     const y = sr() * WH * 0.35
-    ctx.globalAlpha = (0.5 + 0.5 * Math.sin(TAU * phase(env.t, T, 1 + (i % 3)) + i)) * (1 - y / (WH * 0.35))
+    ctx.globalAlpha = (0.5 + 0.5 * Math.sin(TAU * phase(env.t, T, freeCycles(1 + (i % 3), env.endless, i)) + i)) * (1 - y / (WH * 0.35))
     const s = Math.max(1, WH / 900)
     ctx.fillRect(x, y, s, s)
   }
@@ -481,7 +546,7 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
   const tailLen = WW * 0.55
   for (let layer = 0; layer < 5; layer++) {
     const spread = 0.05 + layer * 0.035
-    const flick = 1 + 0.05 * Math.sin(TAU * phase(env.t, T, 2 + layer) + layer)
+    const flick = 1 + 0.05 * Math.sin(TAU * phase(env.t, T, freeCycles(2 + layer, env.endless, 120 + layer)) + layer)
     const end: Pt = [head[0] + Math.cos(tailDir) * tailLen * flick * (1 - layer * 0.08), head[1] + Math.sin(tailDir) * tailLen * flick * (1 - layer * 0.08)]
     const nrm: Pt = [-Math.sin(tailDir), Math.cos(tailDir)]
     const wHead = WH * (0.008 + layer * 0.006)
@@ -503,7 +568,7 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
     ctx.closePath()
     ctx.fill()
   }
-  const pulse = 1 + 0.08 * Math.sin(TAU * phase(env.t, T, 3))
+  const pulse = 1 + 0.08 * Math.sin(TAU * phase(env.t, T, freeCycles(3, env.endless, 130)))
   const cg = ctx.createRadialGradient(head[0], head[1], 0, head[0], head[1], WH * 0.06 * pulse)
   cg.addColorStop(0, '#ffffff')
   cg.addColorStop(0.15, '#fff2d0')
@@ -522,7 +587,7 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
   const vw = WH * 0.95
   const vh = WH * 0.42
   const crater: Pt = [vx, vy - vh]
-  const glowPulse = 0.75 + 0.25 * Math.sin(TAU * phase(env.t, T, 2))
+  const glowPulse = 0.75 + 0.25 * Math.sin(TAU * phase(env.t, T, freeCycles(2, env.endless, 131)))
   const vg = ctx.createRadialGradient(crater[0], crater[1], 0, crater[0], crater[1], WH * 0.35)
   vg.addColorStop(0, `rgba(255, 150, 60, ${0.75 * glowPulse})`)
   vg.addColorStop(1, 'rgba(255, 90, 30, 0)')
@@ -530,13 +595,15 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
   ctx.fillRect(crater[0] - WH * 0.35, crater[1] - WH * 0.35, WH * 0.7, WH * 0.7)
 
   // Smoke puffs, each rising and swelling over one whole cycle, staggered.
+  // Endless, each puff is a new one: its size and lean from which puff it is.
   const puffs = 9
-  const puffCycles = wholeCycles(T / 6)
+  const puffCycles = cyclesPerLoop(T / 6, env.endless)
   for (let i = 0; i < puffs; i++) {
     const p = (phase(env.t, T, puffCycles) + i / puffs) % 1
+    const own = env.endless ? rng(hash(opts.seed, 64, i, lapNumber(env.t, T, puffCycles, i / puffs))) : null
     const rise = p * WH * 0.55
-    const lean = p * p * WH * 0.25
-    const size = WH * (0.035 + p * 0.12)
+    const lean = p * p * WH * 0.25 * (own ? between(own, 0.5, 1.4) : 1)
+    const size = WH * (0.035 + p * 0.12) * (own ? between(own, 0.75, 1.3) : 1)
     ctx.globalAlpha = Math.sin(p * Math.PI) * 0.85
     ctx.fillStyle = mix('#5a4a52', '#2a1e2a', p)
     ctx.beginPath()
@@ -552,7 +619,7 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
   ctx.lineJoin = 'round'
   for (let k = 0; k < 4; k++) {
     const flow = lavaFlow([crater[0] + (k - 1.5) * vw * 0.025, crater[1] + vh * 0.02], vh * between(r, 0.45, 0.85), (k - 1.5) * 0.45, hash(opts.seed, 70, k))
-    const flick = 0.7 + 0.3 * Math.sin(TAU * phase(env.t, T, 3 + k) + k)
+    const flick = 0.7 + 0.3 * Math.sin(TAU * phase(env.t, T, freeCycles(3 + k, env.endless, 140 + k)) + k)
     ctx.strokeStyle = `rgba(255, 120, 30, ${0.35 * flick})`
     ctx.lineWidth = WH * 0.022
     strokeLine(ctx, flow)
@@ -568,10 +635,17 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
   const bombs = 14
   const br = rng(hash(opts.seed, 80))
   for (let i = 0; i < bombs; i++) {
-    const cyc = wholeCycles(T / between(br, 1.4, 2.6))
-    const p = (phase(env.t, T, cyc) + br()) % 1
-    const vxB = between(br, -1, 1) * WH * 0.25
-    const up = WH * between(br, 0.25, 0.45)
+    const cyc = cyclesPerLoop(T / between(br, 1.4, 2.6), env.endless)
+    const at = br()
+    const p = (phase(env.t, T, cyc) + at) % 1
+    let vxB = between(br, -1, 1) * WH * 0.25
+    let up = WH * between(br, 0.25, 0.45)
+    if (env.endless) {
+      // A new throw every launch: which way and how high, from which launch it is.
+      const c = rng(hash(opts.seed, 81, i, lapNumber(env.t, T, cyc, at)))
+      vxB = between(c, -1, 1) * WH * 0.25
+      up = WH * between(c, 0.25, 0.45)
+    }
     const x = crater[0] + vxB * p
     const y = crater[1] - up * 4 * p * (1 - p)
     ctx.globalAlpha = 1 - p * 0.6
@@ -598,7 +672,7 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
     const palmH = WH * between(pr, 0.25, 0.4)
     const fernH = WH * between(pr, 0.08, 0.14)
     if (x < x0 || x > x1) continue
-    if (kind < 0.5) fillShapes(ctx, palm(x, ground + WH * 0.02, palmH, hash(opts.seed, 92, i), plant, Math.sin(TAU * phase(env.t, T, 1) + i)))
+    if (kind < 0.5) fillShapes(ctx, palm(x, ground + WH * 0.02, palmH, hash(opts.seed, 92, i), plant, Math.sin(TAU * phase(env.t, T, freeCycles(1, env.endless, 150 + i)) + i)))
     else fillShapes(ctx, fern(x, ground + WH * 0.03, fernH, hash(opts.seed, 93, i), plant))
   }
 
@@ -624,14 +698,23 @@ export function drawVolcano(ctx: Ctx, w: number, h: number, opts: SceneOptions, 
     ctx.restore()
   }
 
-  // Pterosaurs crossing in silhouette.
+  // Pterosaurs crossing in silhouette. Endless, a new one each crossing.
   const fr = rng(hash(opts.seed, 95))
   for (let i = 0; i < 4; i++) {
     const span = WH * between(fr, 0.04, 0.07)
-    const flap = phase(env.t, T, wholeCycles(T / between(fr, 0.6, 0.9)))
-    const x = fr() * WW + phase(env.t, T, 1) * WW
+    const beat = between(fr, 0.6, 0.9)
+    const baseX = fr() * WW
     const y = WH * between(fr, 0.32, 0.5)
-    eachRepeat(x, WW, x0, x1, (px) => fillShapes(ctx, pterosaur(px, y, span, flap, '#1a0c18')))
+    const flapAt = (b: number) => phase(env.t, T, cyclesPerLoop(T / b, env.endless))
+    if (env.endless) {
+      eachRepeatIndexed(lapX(env, baseX, 1, WW), WW, x0, x1, (px, k) => {
+        const c = rng(hash(opts.seed, 96, i, k))
+        const cs = WH * between(c, 0.04, 0.07)
+        fillShapes(ctx, pterosaur(px, WH * between(c, 0.32, 0.5), cs, flapAt(between(c, 0.6, 0.9)), '#1a0c18'))
+      })
+    } else {
+      eachRepeat(baseX + phase(env.t, T, 1) * WW, WW, x0, x1, (px) => fillShapes(ctx, pterosaur(px, y, span, flapAt(beat), '#1a0c18')))
+    }
   }
   ctx.restore()
 }

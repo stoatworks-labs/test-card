@@ -27,7 +27,7 @@ import {
   getPatternImage,
   setPatternImage,
 } from '../patterns/render'
-import { isAnimated } from '../patterns/env'
+import { endlessOn, isAnimated } from '../patterns/env'
 import { loopTiming } from '../patterns/loop'
 import { decodeImage, loadImage, onImageChanged } from '../state/image-store'
 import { describePlacement, liveTime, liveUrl, placeRaster, type LiveParams, type Size } from '../live/plan'
@@ -255,11 +255,12 @@ export function LiveView({ params: opened }: { params: LiveParams }) {
     // Moving: drawn at the window's scale each frame, as the preview does,
     // since a full-size render per frame would be too slow for a big raster.
     const loop = loopTiming(settings.animation).seconds
+    const endless = endlessOn(settings)
     let raf = 0
     let frames = 0
     let since = performance.now()
     const tick = (now: number) => {
-      paint(liveTime(unixMs(now), loop))
+      paint(liveTime(unixMs(now), loop, endless))
       frames++
       if (now - since >= 1000) {
         setFps(Math.round((frames * 10000) / (now - since)) / 10)

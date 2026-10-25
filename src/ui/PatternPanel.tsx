@@ -1,6 +1,6 @@
 import type { PatternKind, PatternSettings } from '../types'
 import { PATTERN_LABELS, spansSurface } from '../patterns/render'
-import { isAnimated, isScaleAware } from '../patterns/env'
+import { canRunEndless, endlessOn, isAnimated, isScaleAware } from '../patterns/env'
 import type { ImageInfo } from '../state/store'
 import {
   BananaControls,
@@ -144,7 +144,7 @@ export function PatternPanel({
       {kind === 'dino-scroll' || kind === 'volcano' || kind === 'spooky-forest' || kind === 'haunted-house' ? (
         <SceneControls kind={kind} opts={settings.scene} patch={sub('scene')} />
       ) : null}
-      {isIdle(kind) ? <IdleControls kind={kind} opts={settings.idle} patch={sub('idle')} /> : null}
+      {isIdle(kind) ? <IdleControls kind={kind} opts={settings.idle} patch={sub('idle')} endless={endlessOn(settings)} /> : null}
       {kind === 'broken-wall' ? <BrokenControls opts={settings.broken} patch={sub('broken')} /> : null}
       {kind === 'image' ? (
         <ImageControls opts={settings.image} patch={sub('image')} image={image} onImage={onImage} />
@@ -160,7 +160,9 @@ export function PatternPanel({
           showSpan={surface}
         />
       ) : null}
-      {isAnimated(settings) ? <LoopControls opts={settings.animation} patch={sub('animation')} /> : null}
+      {isAnimated(settings) ? (
+        <LoopControls opts={settings.animation} patch={sub('animation')} endlessable={canRunEndless(settings)} />
+      ) : null}
 
       <Field label="Level range">
         <select

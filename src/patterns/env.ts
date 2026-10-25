@@ -29,10 +29,18 @@ export type EnvTile = {
 }
 
 export type PaintEnv = {
-  /** Seconds into the loop. A still is t = stillAtSeconds. */
+  /**
+   * Seconds into the loop. A still is t = stillAtSeconds. When `endless`,
+   * seconds into the endless run, which can be any size (see loop.ts).
+   */
   t: number
-  /** The loop's exact length, from `loopTiming`. Moving things are periodic in it. */
+  /** The loop's exact length, from `loopTiming`. Moving things are periodic in it, unless `endless`. */
   loopSeconds: number
+  /**
+   * Live-only endless running (`endlessOn`): fit nothing to the loop, and make
+   * whatever comes round a new one each time. Only the generative patterns read it.
+   */
+  endless: boolean
   /**
    * The surface this canvas is a window onto, in the painter's own units. When
    * outputs are not spanned this is just the canvas.
@@ -62,6 +70,7 @@ export function plainEnv(w: number, h: number, patch: Partial<PaintEnv> = {}): P
   return {
     t: 0,
     loopSeconds: 10,
+    endless: false,
     world: { widthPx: w, heightPx: h },
     view: { x: 0, y: 0 },
     mmPerPx: 2.6,
@@ -95,6 +104,32 @@ function moves(kind: PatternSettings['kind'], settings: PatternSettings): boolea
     return p.faces.some((f) => PUMPKIN_FACES.includes(f)) && (p.flicker || p.expressions)
   }
   return MOVING.has(kind)
+}
+
+/**
+ * The patterns that generate rather than measure: the idle savers, the hamsters,
+ * the moving scenes and the Halloween ones. AV sync moves too, but it is a
+ * measurement and must be a loop, so it is not here.
+ */
+const GENERATIVE: ReadonlySet<PatternSettings['kind']> = new Set([
+  'hamsters',
+  'ocean',
+  'dino-scroll',
+  'volcano',
+  'spooky-forest',
+  'haunted-house',
+  'pumpkins',
+])
+
+/** Whether this pattern can run endless: a generative one, moving with these settings. */
+export function canRunEndless(settings: PatternSettings): boolean {
+  const k = settings.kind === 'broken-wall' ? settings.broken.base : settings.kind
+  return (isIdle(k) || GENERATIVE.has(k)) && moves(k, settings)
+}
+
+/** Whether this pattern IS running endless: the switch is on and it can. */
+export function endlessOn(settings: PatternSettings): boolean {
+  return settings.animation.endless === true && canRunEndless(settings)
 }
 
 /** Whether a pattern changes over time, and so can be exported as a loop. */

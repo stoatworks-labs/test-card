@@ -14,6 +14,8 @@
  * a moving pattern is at.
  */
 
+import { endlessTime } from '../patterns/loop'
+
 /** What a live window shows. */
 export type LiveSource =
   | { kind: 'output'; id: string }
@@ -145,9 +147,12 @@ export function describePlacement(p: Placement): string {
  *
  * Every live window works it out from the same clock rather than from when it
  * was opened, so two windows showing a pattern that carries on across outputs
- * stay in step with each other, and a window opened later joins in phase.
+ * stay in step with each other, and a window opened later joins in phase. An
+ * endless pattern has no loop to be in: its time is the same clock's, unwrapped
+ * (`endlessTime`), so the windows agree on that too.
  */
-export function liveTime(unixMs: number, loopSeconds: number): number {
+export function liveTime(unixMs: number, loopSeconds: number, endless = false): number {
+  if (endless) return endlessTime(unixMs)
   const t = (unixMs / 1000) % loopSeconds
   return t < 0 ? t + loopSeconds : t
 }

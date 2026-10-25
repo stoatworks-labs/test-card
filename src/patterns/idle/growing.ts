@@ -13,7 +13,7 @@
  * a broken file rather than a new maze.
  */
 
-import { countFromDensity, orbit, runTime, settingsColour, type IdleSettings, type Saver } from './common'
+import { countFromDensity, orbit, runLength, runSeed, runTime, settingsColour, type IdleSettings, type Saver } from './common'
 import {
   add3,
   hash2,
@@ -59,7 +59,10 @@ abstract class GrowingSaver implements Saver {
   /** Where in the loop the run restarts, 0..1. */
   abstract readonly restartAt: number
 
-  build(s: IdleSettings, scene: Scene) {
+  build(given: IdleSettings, scene: Scene) {
+    // Endless, each run grows from a seed of its own; looping, this is the seed.
+    const seed = runSeed(given, this.restartAt)
+    const s = seed === given.seed ? given : { ...given, seed }
     const rate = Math.max(0.01, this.tickRate(s))
     const run = runTime(s, this.restartAt)
     const exact = Math.min(Math.max(0, run) * rate, GrowingSaver.MAX_REPLAY_STEPS)
@@ -359,9 +362,10 @@ export class Maze extends GrowingSaver {
   draw(s: IdleSettings, alpha: number, run: number, scene: Scene) {
     scene.depthTest = true
     scene.shading = s.shading === Shading.Flat ? Shading.Lit : s.shading
-    const fadeLength = Math.min(MAZE_FADE, s.period / 8)
-    if (s.period > 0 && fadeLength > 0) {
-      const edge = Math.min(run, s.period - run) / fadeLength
+    const length = runLength(s)
+    const fadeLength = Math.min(MAZE_FADE, length / 8)
+    if (length > 0 && fadeLength > 0) {
+      const edge = Math.min(run, length - run) / fadeLength
       scene.fade = edge >= 1 ? 1 : edge * edge * (3 - 2 * edge)
     }
 

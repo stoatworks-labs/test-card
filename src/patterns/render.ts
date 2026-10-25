@@ -29,7 +29,7 @@ import {
   uniformTileCount,
   type Ctx,
 } from './draw'
-import { isAnimated, plainEnv, type PaintEnv, type PatternImage } from './env'
+import { endlessOn, isAnimated, plainEnv, type PaintEnv, type PatternImage } from './env'
 import { drawBananas, drawDinosaurs, drawHamsters, drawRulers } from './novelty'
 import { drawDinoScroll, drawOcean, drawVolcano } from './scenes'
 import { drawHauntedHouse, drawPumpkins, drawSpookyForest } from './halloween'
@@ -274,12 +274,16 @@ export function patternAudio(settings: PatternSettings): { sampleRate: number; c
   return { sampleRate: SAMPLE_RATE, channels: 2, pcm: syncAudio(loopTiming(settings.animation), settings.avSync) }
 }
 
-/** The moment a still of a moving pattern shows, and the loop it belongs to. */
+/**
+ * The moment a still of a moving pattern shows, and the loop it belongs to. An
+ * endless pattern's moment is not wrapped into the loop: it has none, and a
+ * still at 75 s is not the one at 15 s. It is also where an MP4 slice of it starts.
+ */
 export function stillTime(settings: PatternSettings): { t: number; loopSeconds: number } {
   const timing = loopTiming(settings.animation)
   if (!isAnimated(settings)) return { t: 0, loopSeconds: timing.seconds }
-  const t = Math.max(0, settings.animation.stillAtSeconds) % timing.seconds
-  return { t, loopSeconds: timing.seconds }
+  const at = Math.max(0, settings.animation.stillAtSeconds)
+  return { t: endlessOn(settings) ? at : at % timing.seconds, loopSeconds: timing.seconds }
 }
 
 /**
@@ -307,6 +311,7 @@ export function makeEnv(
   return {
     t: t ?? still.t,
     loopSeconds: still.loopSeconds,
+    endless: endlessOn(settings),
     world: place ? { ...place.composition } : { widthPx: pw, heightPx: ph },
     view,
     mmPerPx: pitch.pitchMm / scale,

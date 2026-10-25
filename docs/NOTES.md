@@ -487,3 +487,38 @@ An independent review before landing found three real problems, all fixed:
 Quirks kept from Idler: Speed's centre is 0.94x, not 1 (its dead zone shifts the curve);
 the maze stands still for its first cell after a restart (Idler's reset puts the
 previous cell on the current one).
+
+## 2026-10-25 — endless, for live output
+
+Allan asked for an option on the generative cards (Idle, and the moving Halloween and
+novelty ones) to run "live only": endlessly generated, so live output never repeats, with
+an MP4 either refused or a short slice of the endless run. He chose the slice, "never
+repeats" (whatever comes round comes round new), and one switch.
+
+How it works:
+
+- **`animation.endless`**, one switch under Loop, offered when `canRunEndless` (a generative
+  pattern that moves; never AV sync, which is a measurement). `endlessOn` puts it in the env.
+- **The clock** is seconds since 2026-01-01 on the shared clock (`endlessTime`), for the
+  preview and every live window alike, so a span agrees as the looping windows do with the
+  time modulo the loop. Seconds since 2026 rather than 1970 keep phases exact for decades.
+- **Nothing fitted:** `cyclesPerLoop(natural, endless)` where `wholeCycles` was; small
+  ambient motions through `freeCycles`, a little off their whole number each.
+- **New each time round:** anything that laps the world is drawn from `lapX` (unwrapped)
+  with `eachRepeatIndexed`, whose `k` stays the same all the way across, and its looks are
+  seeded from `k`; launches, puffs, sea bands, dances and the ghost's visits from
+  `lapNumber`, changing only where they can't be seen. Pipes and Maze run in
+  `ENDLESS_RUN_SECONDS` (120 saver seconds) runs from `runSeed`, so a replay is one run.
+- **The MP4** of an endless pattern is a slice from the PNG's moment (`stillTime`, unwrapped),
+  `_slice.mp4`, and the manifest says it doesn't loop.
+- **Loop mode untouched:** every slot draws its random numbers in the same order either way.
+
+Bitten: the sea's waves travel at a speed that depends on a band's depth, so timing them by
+the clock spun them faster every year (a depth-dependent rate times t of 3e7); they're timed
+by the band's own age. The review found the scroll's far herd sliding at Speed 1 (the layer
+scrolls 0.7 widths a loop endless, against the herd's drift of -1; drift is now the loop's
+walk less the scroll), ambient motions still periodic, skeletons with nothing to vary (they
+now pick zombie or skeleton per crossing) and stars on the same rays. Left as it is: the
+seven bats circling the haunted house's spire are the same seven, at unfitted rates, since
+changing one mid-orbit would show.
+

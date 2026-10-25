@@ -17,7 +17,7 @@
  * Idler's own port. So what differs from Idler is only what the loop needs.
  */
 
-import { hsvToRgb, mul3, TAU, v4, type V3, type V4 } from './maths'
+import { hash2, hsvToRgb, mul3, TAU, v4, type V3, type V4 } from './maths'
 import type { Scene, ShadingMode } from './scene'
 
 /** Idler's Settings: the controls already converted to what the savers work in. */
@@ -32,8 +32,17 @@ export type IdleSettings = {
   shading: ShadingMode
   /** Saver seconds: the loop's time with Speed folded in. */
   time: number
-  /** The loop's length in saver seconds. Everything that moves is periodic in it. */
+  /** The loop's length in saver seconds. Everything that moves is periodic in it. 0 fits nothing (Idler's own, and endless). */
   period: number
+  /**
+   * How long one run of a growing saver (Pipes, Maze) lasts, in saver seconds,
+   * when that is not the loop: set only when endless, where the period is 0 and
+   * each run starts afresh from a seed of its own (`runSeed`). Unset or 0: the
+   * period, or no restarts at all when that is 0 too (Idler's own, `check-idle-port`).
+   */
+  run?: number
+  /** Endless (`idleSettings`): things that come round come round as new ones. Unset in Idler's own and when looping. */
+  endless?: boolean
   seed: number
   /** Vertical, radians. */
   fov: number
@@ -116,10 +125,29 @@ export function orbit(s: Clock, perSecond: number): number {
  * loop the restart falls, so frame 0, the default still, is well into a run
  * rather than an empty box.
  */
-export function runTime(s: Clock, start: number): number {
-  if (!(s.period > 0)) return s.time
-  const u = (s.time - start * s.period) % s.period
-  return u < 0 ? u + s.period : u
+export function runTime(s: Clock & Pick<IdleSettings, 'run'>, start: number): number {
+  const length = runLength(s)
+  if (!(length > 0)) return s.time
+  const u = (s.time - start * length) % length
+  return u < 0 ? u + length : u
+}
+
+export type RunClock = Clock & Pick<IdleSettings, 'run' | 'seed'>
+
+/** A growing saver's run, in saver seconds: `run` when endless, else the loop; 0 for no restarts. */
+export function runLength(s: Pick<IdleSettings, 'run' | 'period'>): number {
+  return (s.run ?? 0) > 0 ? s.run! : s.period
+}
+
+/**
+ * The seed a run grows from. Looping, every loop is the same run, from the
+ * seed. Endless, each run is a new one: the seed hashed with which run it is,
+ * counted like `runTime`'s restarts.
+ */
+export function runSeed(s: RunClock, start: number): number {
+  const length = s.run ?? 0
+  if (!(length > 0)) return s.seed
+  return hash2(s.seed >>> 0, Math.floor((s.time - start * length) / length) >>> 0)
 }
 
 // ---------------------------------------------------------------------------

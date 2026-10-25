@@ -9,14 +9,19 @@
  * flicker, a blink, a wingbeat or a stride does a whole number of cycles, and
  * a thing that crosses the sky or the graveyard does one whole lap. The pure
  * parts are exported so the tests can check frame 0 against frame N.
+ *
+ * Endless (live output only, `env.endless`), nothing is fitted, and each bat,
+ * witch, vampire and walker is a new one every time it crosses: its looks come
+ * from which crossing it is (`eachRepeatIndexed`), not from its slot. The
+ * scenery scrolls on its own period as before; what moves through it is new.
  */
 
 import type { PumpkinFace, PumpkinOptions, SceneOptions } from '../types'
 import type { Ctx } from './draw'
 import type { EnvTile, PaintEnv } from './env'
 import { between, hash, pick, rng } from './random'
-import { phase, wholeCycles } from './loop'
-import { fillShapes, mapShapes, tracePath, type Pt } from './art/shapes'
+import { cyclesPerLoop, freeCycles, lapNumber, phase, wholeCycles } from './loop'
+import { fillShapes, mapShapes, tracePath, type Pt, type Shape } from './art/shapes'
 import { grass, makeRidge, mix, ridgeShape, silhouette } from './art/scenery'
 import {
   bat,
@@ -40,7 +45,7 @@ import {
   ZOMBIE_WALK,
 } from './art/halloween'
 import { drawTooManyTiles } from './novelty'
-import { eachRepeat, layerOffset, layerWidths } from './scenes'
+import { eachRepeat, eachRepeatIndexed, lapX, layerOffset, layerWidths } from './scenes'
 
 const TAU = Math.PI * 2
 
@@ -60,11 +65,11 @@ function mod(n: number, m: number): number {
  * 5.3 Hz, each a whole number of cycles per loop. `key` makes every candle
  * flicker in its own way.
  */
-export function candleLevel(t: number, loopSeconds: number, key: number): number {
+export function candleLevel(t: number, loopSeconds: number, key: number, endless = false): number {
   const r = rng(hash(key, 501))
   let v = 0.72
   for (const [hz, amp] of [[1.3, 0.13], [3.1, 0.09], [5.3, 0.05]] as const) {
-    const cycles = wholeCycles(loopSeconds * hz * between(r, 0.85, 1.15))
+    const cycles = cyclesPerLoop(loopSeconds * hz * between(r, 0.85, 1.15), endless)
     v += amp * Math.sin(TAU * phase(t, loopSeconds, cycles) + r() * TAU)
   }
   return clamp01(v)
@@ -74,9 +79,9 @@ export function candleLevel(t: number, loopSeconds: number, key: number): number
  * How far into a blink, a wink or a chomp a face is, 0..1. Brief, every three
  * or four seconds, in a whole number of goes per loop and at a time of its own.
  */
-export function expressionLevel(t: number, loopSeconds: number, key: number): number {
+export function expressionLevel(t: number, loopSeconds: number, key: number, endless = false): number {
   const r = rng(hash(key, 502))
-  const goes = wholeCycles(loopSeconds / between(r, 2.5, 4))
+  const goes = cyclesPerLoop(loopSeconds / between(r, 2.5, 4), endless)
   const p = (phase(t, loopSeconds, goes) + r()) % 1
   const len = 0.14
   return p < len ? Math.sin((Math.PI * p) / len) : 0
@@ -97,14 +102,15 @@ export type Walker = {
  * Where a walker is, and how far through its stride, at time t. It goes once
  * round a lap of `lap` pixels per loop, in a whole number of strides fitted to
  * that distance so its feet keep pace with the ground. A zombie lurches —
- * quick, then slow, once a stride — and still does exactly one lap.
+ * quick, then slow, once a stride — and still does exactly one lap. Endless,
+ * the strides are its own and `x` is not wrapped into the lap (see `lapX`).
  */
-export function walkerAt(w: Walker, lap: number, t: number, loopSeconds: number): { x: number; gait: number } {
+export function walkerAt(w: Walker, lap: number, t: number, loopSeconds: number, endless = false): { x: number; gait: number } {
   const style = w.kind === 'zombie' ? ZOMBIE_WALK : SKELETON_WALK
-  const strides = wholeCycles(lap / (strideOf(style) * w.heightPx))
+  const strides = cyclesPerLoop(lap / (strideOf(style) * w.heightPx), endless)
   const gait = phase(t, loopSeconds, strides)
   const lurch = w.kind === 'zombie' ? (0.5 * Math.sin(TAU * gait)) / (TAU * strides) : 0
-  return { x: w.x + w.dir * lap * (phase(t, loopSeconds, 1) + lurch), gait }
+  return { x: w.x + w.dir * lap * ((endless ? t / loopSeconds : phase(t, loopSeconds, 1)) + lurch), gait }
 }
 
 /**
@@ -188,7 +194,7 @@ function drawStars(ctx: Ctx, env: PaintEnv, seed: number, bottom: number) {
     const y = r() * bottom
     const bright = between(r, 0.35, 1)
     const big = r() < 0.08 ? 1.8 : 1
-    ctx.globalAlpha = bright * (0.55 + 0.45 * Math.sin(TAU * phase(env.t, env.loopSeconds, 1 + (i % 3)) + i)) * (1 - (y / bottom) * 0.7)
+    ctx.globalAlpha = bright * (0.55 + 0.45 * Math.sin(TAU * phase(env.t, env.loopSeconds, freeCycles(1 + (i % 3), env.endless, i)) + i)) * (1 - (y / bottom) * 0.7)
     ctx.fillRect(x, y, s * big, s * big)
   }
   ctx.globalAlpha = 1
@@ -236,7 +242,7 @@ function drawWisps(ctx: Ctx, env: PaintEnv, seed: number, top: number, bottom: n
     const cy = between(r, top, bottom)
     const len = WH * between(r, 0.25, 0.55)
     const th = WH * between(r, 0.01, 0.022)
-    const bob = Math.sin(TAU * phase(env.t, env.loopSeconds, 1) + i * 1.9) * WH * 0.012
+    const bob = Math.sin(TAU * phase(env.t, env.loopSeconds, freeCycles(1, env.endless, 50 + i)) + i * 1.9) * WH * 0.012
     ctx.globalAlpha = 0.6
     ctx.beginPath()
     ctx.ellipse(cx + bob, cy, len / 2, th, 0, 0, TAU)
@@ -268,7 +274,7 @@ function drawMist(
   for (const [k, a] of [[0, alpha], [1, alpha * 0.7]] as const) {
     const h = makeRidge(hash(seed, k), period, { base: 1, octaves: 3, rough: 0.5 })
     const top = y - k * WH * 0.02
-    const offset = scroll + phase(env.t, env.loopSeconds, 1 + k) * period
+    const offset = scroll + phase(env.t, env.loopSeconds, freeCycles(1 + k, env.endless, seed % 997 + k)) * period
     // A sample step that divides the period, so the bank is cut the same way after it wraps.
     const step = period / Math.max(1, Math.round(period / 6))
     const band = ridgeShape(h, x0, x1, top, WH * 0.05, top + depth, colour, offset, step)
@@ -325,8 +331,8 @@ function drawLanternOnGround(ctx: Ctx, x: number, ground: number, size: number, 
   ctx.beginPath()
   ctx.ellipse(x, ground, size * 0.5, size * 0.07, 0, 0, TAU)
   ctx.fill()
-  const lit = candleLevel(env.t, env.loopSeconds, key)
-  drawLantern(ctx, x, ground - size * PUMPKIN_BOTTOM, size, face, lit, expressionLevel(env.t, env.loopSeconds, key))
+  const lit = candleLevel(env.t, env.loopSeconds, key, env.endless)
+  drawLantern(ctx, x, ground - size * PUMPKIN_BOTTOM, size, face, lit, expressionLevel(env.t, env.loopSeconds, key, env.endless))
 }
 
 /** Bats flapping across the sky, each crossing the world once per loop and weaving as it goes. */
@@ -355,6 +361,24 @@ function drawBats(
     const weaves = 1 + Math.floor(r() * 3)
     const weaveAt = r()
     const weave = between(r, 0.6, 1.6)
+    if (env.endless) {
+      // A new bat every crossing: where it flies, its size, its wingbeat and its weave.
+      const most = WH * span[1]
+      eachRepeatIndexed(lapX(env, baseX, dir, lap), lap, x0 - most, x1 + most, (px, k) => {
+        const c = rng(hash(seed, 7, i, k))
+        const cy = between(c, top, bottom)
+        const cs = WH * between(c, span[0], span[1])
+        const cHz = between(c, 2.5, 4.5)
+        const cWeaves = between(c, 1, 3)
+        const cAt = c()
+        const cWeave = between(c, 0.6, 1.6)
+        ctx.save()
+        ctx.translate(px, cy + cs * cWeave * Math.sin(TAU * (phase(env.t, T, cWeaves) + cAt)))
+        fillShapes(ctx, bat(cs, phase(env.t, T, T * cHz), colour))
+        ctx.restore()
+      })
+      continue
+    }
     const x = baseX + dir * phase(env.t, T, 1) * lap
     const yy = y + s * weave * Math.sin(TAU * (phase(env.t, T, weaves) + weaveAt))
     const shapes = bat(s, phase(env.t, T, wholeCycles(T * flapHz)), colour)
@@ -379,10 +403,14 @@ function flight(
   swoopAt: number,
   swoopPx: number,
 ): Flyer {
-  const T = env.loopSeconds
-  const sw = TAU * (phase(env.t, T, swoops) + swoopAt)
+  return { x: lapX(env, baseX, dir, walkLap(env.world)), ...swoop(env, y, dir, swoops, swoopAt, swoopPx), dir }
+}
+
+/** The up and down of a flight: `swoops` per loop, starting `swoopAt` of the way through one. */
+function swoop(env: PaintEnv, y: number, dir: number, swoops: number, swoopAt: number, swoopPx: number): { y: number; angle: number } {
+  const sw = TAU * (phase(env.t, env.loopSeconds, swoops) + swoopAt)
   // Nose down as it drops, nose up as it climbs.
-  return { x: baseX + dir * phase(env.t, T, 1) * walkLap(env.world), y: y + swoopPx * Math.sin(sw), angle: 0.15 * Math.cos(sw) * dir, dir }
+  return { y: y + swoopPx * Math.sin(sw), angle: 0.15 * Math.cos(sw) * dir }
 }
 
 // ---------------------------------------------------------------------------
@@ -415,8 +443,8 @@ export function drawPumpkins(ctx: Ctx, w: number, h: number, opts: PumpkinOption
   for (const t of tiles) {
     const key = tileKey(opts.seed, t, env)
     const face = tileFace(opts, key)
-    const lit = !face ? 0 : opts.flicker ? candleLevel(env.t, T, key) : 0.8
-    const e = face && opts.expressions ? expressionLevel(env.t, T, key) : 0
+    const lit = !face ? 0 : opts.flicker ? candleLevel(env.t, T, key, env.endless) : 0.8
+    const e = face && opts.expressions ? expressionLevel(env.t, T, key, env.endless) : 0
     ctx.save()
     ctx.beginPath()
     ctx.rect(t.x, t.y, t.width, t.height)
@@ -463,7 +491,7 @@ function plant(seed: number, period: number, n: number, minH: number, maxH: numb
 export function drawSpookyForest(ctx: Ctx, w: number, h: number, opts: SceneOptions, env: PaintEnv) {
   const { widthPx: WW, heightPx: WH } = env.world
   const T = env.loopSeconds
-  const widths = layerWidths(opts.speed)
+  const widths = layerWidths(opts.speed, env.endless)
   const off = widths.map((n) => layerOffset(n, WW, env.t, T))
   const r = rng(hash(opts.seed, 201))
   const per = (k: number) => Math.max(1, Math.round(WW / (WH * k)))
@@ -508,7 +536,7 @@ export function drawSpookyForest(ctx: Ctx, w: number, h: number, opts: SceneOpti
     has: er() < 0.4,
     dx: between(er, -0.12, 0.12) * tr.h,
     dy: between(er, 0.4, 0.7) * tr.h,
-    blinks: wholeCycles(T / between(er, 2, 5)),
+    blinks: cyclesPerLoop(T / between(er, 2, 5), env.endless),
     at: er(),
   }))
   for (const tr of mid) eachRepeat(tr.x - off[2]!, WW, x0, x1, (px) => drawTree(ctx, px, g2 + 1, tr.h, tr.seed, 4, FOREST.mid))
@@ -544,22 +572,35 @@ export function drawSpookyForest(ctx: Ctx, w: number, h: number, opts: SceneOpti
     const swoops = 1 + Math.floor(wr() * 2)
     const swoopAt = wr()
     const flutterHz = between(wr, 1.2, 2)
-    const f = flight(env, baseX, y, dir, swoops, swoopAt, WH * 0.035)
-    const shapes = witch(L, phase(env.t, T, wholeCycles(T * flutterHz)), cat, '#0a0710')
-    // Moonlight catching her edge, then the witch over it.
-    const rim = silhouette(shapes, '#6f62a8')
-    eachRepeat(f.x, lap, x0 - L, x1 + L, (px) => {
+    const drawWitch = (px: number, fy: number, angle: number, size: number, shapes: Shape[]) => {
+      // Moonlight catching her edge, then the witch over it.
+      const rim = silhouette(shapes, '#6f62a8')
       ctx.save()
-      ctx.translate(px, f.y)
-      ctx.rotate(f.angle)
-      ctx.scale(f.dir, 1)
+      ctx.translate(px, fy)
+      ctx.rotate(angle)
+      ctx.scale(dir, 1)
       ctx.save()
-      ctx.translate(L * 0.008, -L * 0.008)
+      ctx.translate(size * 0.008, -size * 0.008)
       fillShapes(ctx, rim)
       ctx.restore()
       fillShapes(ctx, shapes)
       ctx.restore()
-    })
+    }
+    if (env.endless) {
+      // A new witch every crossing: her height, size, cat, swoops and broom's flutter.
+      eachRepeatIndexed(lapX(env, baseX, dir, lap), lap, x0 - WH * 0.22, x1 + WH * 0.22, (px, k) => {
+        const c = rng(hash(opts.seed, 241, i, k))
+        const cy = WH * between(c, 0.12, 0.4)
+        const cL = WH * between(c, 0.15, 0.22)
+        const cCat = c() < 0.5
+        const sw = swoop(env, cy, dir, between(c, 1, 2.5), c(), WH * 0.035)
+        drawWitch(px, sw.y, sw.angle, cL, witch(cL, phase(env.t, T, T * between(c, 1.2, 2)), cCat, '#0a0710'))
+      })
+      continue
+    }
+    const f = flight(env, baseX, y, dir, swoops, swoopAt, WH * 0.035)
+    const shapes = witch(L, phase(env.t, T, wholeCycles(T * flutterHz)), cat, '#0a0710')
+    eachRepeat(f.x, lap, x0 - L, x1 + L, (px) => drawWitch(px, f.y, f.angle, L, shapes))
   }
 
   // Layer 3: the near wood — stones, great trunks, and lanterns at their feet.
@@ -644,8 +685,14 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
   const unlit = house.windows.map((win, i) => [win, i] as const).filter(([win, i]) => win.state === 'dark' && i < house.windows.length - 1)
   const lit = house.windows.map((win, i) => [win, i] as const).filter(([win, i]) => win.state === 'lit' && i < house.windows.length - 1)
   const choices = unlit.length ? unlit : lit
-  const haunted = choices[Math.floor(r() * choices.length)]?.[1] ?? -1
+  let haunted = choices[Math.floor(r() * choices.length)]?.[1] ?? -1
   const ghostAt = r()
+  // Endless, the ghost picks a window each time it comes, changing at the start of
+  // a visit, when it has not yet appeared.
+  if (env.endless && choices.length) {
+    const visit = lapNumber(env.t, T, 1, ghostAt)
+    haunted = choices[Math.floor(rng(hash(opts.seed, 304, visit))() * choices.length)]![1]
+  }
 
   drawSky(ctx, env, w, h, WH * 0.8, [[0, '#05060f'], [0.55, '#1b1640'], [1, '#4a3462']])
   drawStars(ctx, env, opts.seed + 1, WH * 0.6)
@@ -663,17 +710,30 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
     const flapHz = between(vr, 0.7, 1.1)
     const swoops = 1 + Math.floor(vr() * 2)
     const swoopAt = vr()
-    const swoop = WH * between(vr, 0.03, 0.06)
-    const f = flight(env, baseX, y, dir, swoops, swoopAt, swoop)
-    const shapes = vampire(B, phase(env.t, T, wholeCycles(T * flapHz)))
-    eachRepeat(f.x, lap, x0 - B, x1 + B, (px) => {
+    const swoopPx = WH * between(vr, 0.03, 0.06)
+    const drawVampire = (px: number, fy: number, angle: number, shapes: Shape[]) => {
       ctx.save()
-      ctx.translate(px, f.y)
-      ctx.rotate(f.angle)
-      ctx.scale(f.dir, 1)
+      ctx.translate(px, fy)
+      ctx.rotate(angle)
+      ctx.scale(dir, 1)
       fillShapes(ctx, shapes)
       ctx.restore()
-    })
+    }
+    if (env.endless) {
+      // A new vampire every crossing: height, size, wingbeat and swoops.
+      eachRepeatIndexed(lapX(env, baseX, dir, lap), lap, x0 - WH * 0.21, x1 + WH * 0.21, (px, k) => {
+        const c = rng(hash(opts.seed, 311, i, k))
+        const cy = WH * between(c, 0.08, 0.36)
+        const cB = WH * between(c, 0.15, 0.21)
+        const cHz = between(c, 0.7, 1.1)
+        const sw = swoop(env, cy, dir, between(c, 1, 2.5), c(), WH * between(c, 0.03, 0.06))
+        drawVampire(px, sw.y, sw.angle, vampire(cB, phase(env.t, T, T * cHz)))
+      })
+      continue
+    }
+    const f = flight(env, baseX, y, dir, swoops, swoopAt, swoopPx)
+    const shapes = vampire(B, phase(env.t, T, wholeCycles(T * flapHz)))
+    eachRepeat(f.x, lap, x0 - B, x1 + B, (px) => drawVampire(px, f.y, f.angle, shapes))
   }
 
   const far = makeRidge(hash(opts.seed, 320), WW, { base: 2, rough: 0.45 })
@@ -684,7 +744,7 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
   const orbit = Array.from({ length: 7 }, () => ({
     rx: WH * between(br, 0.09, 0.2),
     ry: between(br, 0.25, 0.4),
-    laps: wholeCycles(T / between(br, 2.5, 4.5)) * (br() < 0.5 ? -1 : 1),
+    laps: cyclesPerLoop(T / between(br, 2.5, 4.5), env.endless) * (br() < 0.5 ? -1 : 1),
     at: br(),
     span: WH * between(br, 0.032, 0.045),
     flapHz: between(br, 3, 5),
@@ -697,7 +757,7 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
       const s = b.span * (0.85 + 0.15 * Math.sin(a))
       ctx.save()
       ctx.translate(centre[0] + b.rx * Math.cos(a), centre[1] + b.rx * b.ry * Math.sin(a))
-      fillShapes(ctx, bat(s, phase(env.t, T, wholeCycles(T * b.flapHz)), '#0a0710'))
+      fillShapes(ctx, bat(s, phase(env.t, T, cyclesPerLoop(T * b.flapHz, env.endless)), '#0a0710'))
       ctx.restore()
     }
   }
@@ -714,7 +774,7 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
 
   fillShapes(ctx, house.body)
   house.windows.forEach((win, i) => {
-    const level = candleLevel(env.t, T, hash(opts.seed, 340, i))
+    const level = candleLevel(env.t, T, hash(opts.seed, 340, i), env.endless)
     if (win.state === 'lit') {
       const glow = ctx.createRadialGradient(win.cx, win.cy, 0, win.cx, win.cy, Math.max(win.w, win.h) * 2)
       glow.addColorStop(0, `rgba(255, 180, 90, ${0.22 * level})`)
@@ -733,7 +793,7 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
         tracePath(ctx, win.pane, false, true)
         ctx.clip()
         ctx.translate(win.cx, win.cy + win.h * 0.15)
-        fillShapes(ctx, ghost(win.h * 0.95, phase(env.t, T, 2)).map((s) => ({ ...s, alpha: (s.alpha ?? 1) * a })))
+        fillShapes(ctx, ghost(win.h * 0.95, phase(env.t, T, freeCycles(2, env.endless, 70))).map((s) => ({ ...s, alpha: (s.alpha ?? 1) * a })))
         ctx.restore()
       }
     }
@@ -799,21 +859,49 @@ export function drawHauntedHouse(ctx: Ctx, w: number, h: number, opts: SceneOpti
       look: hash(opts.seed, 361, i),
     })
   }
-  walkers.sort((a, b) => a.y - b.y)
-  for (const wk of walkers) {
-    const { x, gait } = walkerAt(wk, lap, env.t, T)
+  const drawWalker = (wk: Walker, px: number, gait: number) => {
     const k = wk.heightPx
-    const shapes = mapShapes(wk.kind === 'zombie' ? zombie(gait, wk.look) : skeleton(gait), ([px, py]) => [px * k * wk.dir, -py * k], k)
-    eachRepeat(x, lap, x0 - k, x1 + k, (px) => {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
-      ctx.beginPath()
-      ctx.ellipse(px, wk.y, k * 0.16, k * 0.025, 0, 0, TAU)
-      ctx.fill()
-      ctx.save()
-      ctx.translate(px, wk.y)
-      fillShapes(ctx, shapes)
-      ctx.restore()
+    const shapes = mapShapes(wk.kind === 'zombie' ? zombie(gait, wk.look) : skeleton(gait), ([sx, sy]) => [sx * k * wk.dir, -sy * k], k)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
+    ctx.beginPath()
+    ctx.ellipse(px, wk.y, k * 0.16, k * 0.025, 0, 0, TAU)
+    ctx.fill()
+    ctx.save()
+    ctx.translate(px, wk.y)
+    fillShapes(ctx, shapes)
+    ctx.restore()
+  }
+  if (env.endless) {
+    // A new one every crossing: zombie or skeleton, how near, how tall and how it
+    // looks come from which crossing it is (a skeleton has no looks of its own, so
+    // only its kind can make it new). Each still walks its slot's way. All of them
+    // are sorted together, nearest last.
+    const crossing: { wk: Walker; x: number; gait: number }[] = []
+    const most = WH * 0.21 * 1.11
+    walkers.forEach((slot, i) => {
+      eachRepeatIndexed(lapX(env, slot.x, slot.dir, lap), lap, x0 - most * 1.6, x1 + most * 1.6, (_px, k) => {
+        const c = rng(hash(opts.seed, 362, i, k))
+        const depth = between(c, -0.025, 0.035)
+        const heightPx = WH * between(c, 0.18, 0.21) * (1 + depth * 3)
+        const wk: Walker = {
+          ...slot,
+          kind: c() < 0.5 ? 'zombie' : 'skeleton',
+          y: WH * (0.915 + depth),
+          heightPx,
+          look: hash(opts.seed, 363, i, k),
+        }
+        const { x, gait } = walkerAt(wk, lap, env.t, T, true)
+        crossing.push({ wk, x: x + k * lap, gait })
+      })
     })
+    crossing.sort((a, b) => a.wk.y - b.wk.y)
+    for (const c of crossing) drawWalker(c.wk, c.x, c.gait)
+  } else {
+    walkers.sort((a, b) => a.y - b.y)
+    for (const wk of walkers) {
+      const { x, gait } = walkerAt(wk, lap, env.t, T)
+      eachRepeat(x, lap, x0 - wk.heightPx, x1 + wk.heightPx, (px) => drawWalker(wk, px, gait))
+    }
   }
 
   // In front of them: big stones, lanterns, grass and a last wisp of mist.

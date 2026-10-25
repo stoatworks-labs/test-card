@@ -8,7 +8,7 @@ import type { IdleKind, IdleLook, PatternSettings } from '../types'
 import { Colour, Field } from './PatternPanel'
 import { Seed } from './NoveltyControls'
 import { PATTERN_LABELS } from '../patterns/render'
-import { IDLE_AS_IT_RAN, IDLE_CONTROLS, isIdle3d, offersFlat, usesCamDistance } from '../patterns/idle'
+import { ENDLESS_RUN_SECONDS, IDLE_AS_IT_RAN, IDLE_CONTROLS, isIdle3d, offersFlat, usesCamDistance } from '../patterns/idle'
 import { camTiltFromParam, fovFromParam, hueCycleFromParam, speedFromParam } from '../patterns/idle/common'
 
 type Patch = (patch: Record<string, unknown>) => void
@@ -28,7 +28,18 @@ function Slider({ label, value, show, onChange }: { label: string; value: number
   )
 }
 
-export function IdleControls({ kind, opts, patch }: { kind: IdleKind; opts: PatternSettings['idle']; patch: Patch }) {
+export function IdleControls({
+  kind,
+  opts,
+  patch,
+  endless = false,
+}: {
+  kind: IdleKind
+  opts: PatternSettings['idle']
+  patch: Patch
+  /** Running endless (`endlessOn`): Idler's own speeds, and a new network every run. */
+  endless?: boolean
+}) {
   const look = opts.looks[kind] ?? IDLE_AS_IT_RAN[kind]
   const set = (p: Partial<IdleLook>) => patch({ looks: { [kind]: p } })
   const names = IDLE_CONTROLS[kind]
@@ -97,15 +108,24 @@ export function IdleControls({ kind, opts, patch }: { kind: IdleKind; opts: Patt
       ) : null}
       <Colour label="Background" value={look.background} onChange={(background) => set({ background })} />
 
-      <p className="hint">
-        Every speed in it is rounded to a whole number of cycles in the loop, so the MP4 has no seam; a
-        longer loop leaves more of Idler’s own speeds alone.
-        {growing
-          ? kind === 'pipes'
-            ? ' Each loop is one run from the seed: the box clears 40% of the way through, so the still at 0 s is a grown network.'
-            : ' Each loop is one walk from the seed, fading out and back in halfway through the loop, where it starts again.'
-          : ''}
-      </p>
+      {endless ? (
+        <p className="hint">
+          Endless: Idler’s own speeds, none rounded to the loop.
+          {growing
+            ? ` Every ${ENDLESS_RUN_SECONDS} s of the saver’s time it starts a new ${kind === 'pipes' ? 'box of pipes' : 'maze'} from a seed of its own, so it never builds the same one twice.`
+            : ''}
+        </p>
+      ) : (
+        <p className="hint">
+          Every speed in it is rounded to a whole number of cycles in the loop, so the MP4 has no seam; a
+          longer loop leaves more of Idler’s own speeds alone.
+          {growing
+            ? kind === 'pipes'
+              ? ' Each loop is one run from the seed: the box clears 40% of the way through, so the still at 0 s is a grown network.'
+              : ' Each loop is one walk from the seed, fading out and back in halfway through the loop, where it starts again.'
+            : ''}
+        </p>
+      )}
     </>
   )
 }

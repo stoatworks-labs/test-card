@@ -30,7 +30,8 @@ import {
 } from './art/dinosaurs'
 import { DANCES, FRAMES, hamsterFrame, PALETTE, SPRITE_SIZE } from './art/hamster'
 import { fillShapes, mapShapes, type Shape } from './art/shapes'
-import { phase, wholeCycles } from './loop'
+import { cyclesPerLoop, lapNumber, phase } from './loop'
+import { hash, pick, rng } from './random'
 import { formatLength, rulerTicks } from './scale'
 
 const SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
@@ -423,11 +424,23 @@ export function drawDinosaurs(ctx: Ctx, w: number, h: number, opts: DinosaurOpti
 // Hamsters
 // ---------------------------------------------------------------------------
 
-/** Dance cycles per loop: whole cycles, so the loop has no seam. */
-export function hamsterCycles(bpm: number, loopSeconds: number): number {
+/** Dance cycles per loop: whole cycles, so the loop has no seam; endless, exactly the BPM's. */
+export function hamsterCycles(bpm: number, loopSeconds: number, endless = false): number {
   // One pose per half beat, FRAMES poses per cycle -> a cycle is FRAMES/2 beats.
   const beats = (Math.max(20, Math.min(300, bpm)) * loopSeconds) / 60
-  return wholeCycles(beats / (FRAMES / 2))
+  return cyclesPerLoop(beats / (FRAMES / 2), endless)
+}
+
+/**
+ * The dance a tile does. Looping, each tile has one, by where it is in the grid.
+ * Endless, a tile picks a new one every time round the dance (`round`), keyed on
+ * where the tile sits on the surface as the pumpkins are, so a span's outputs
+ * don't all switch to the same dance.
+ */
+export function hamsterDance(tile: Pick<EnvTile, 'x' | 'y' | 'col' | 'row'>, env: Pick<PaintEnv, 'view' | 'localKey' | 'endless'>, round: number) {
+  if (!env.endless) return DANCES[mod(tile.col + tile.row, DANCES.length)]!
+  const key = hash(Math.round(tile.x + env.view.x), Math.round(tile.y + env.view.y), env.localKey, round)
+  return pick(rng(hash(key, 431)), DANCES)
 }
 
 const TILE_HUES = ['#fde2f0', '#e2f0fd', '#e7fde2', '#fdf6e2', '#efe2fd', '#e2fdf8']
@@ -441,14 +454,15 @@ export function drawHamsters(ctx: Ctx, w: number, h: number, opts: HamsterOption
   if (drawTooManyTiles(ctx, w, h, env)) return
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, w, h)
-  const cycles = hamsterCycles(opts.bpm, env.loopSeconds)
+  const cycles = hamsterCycles(opts.bpm, env.loopSeconds, env.endless)
   const beat = Math.floor(phase(env.t, env.loopSeconds, cycles) * FRAMES)
+  const round = lapNumber(env.t, env.loopSeconds, cycles)
   const tiles = env.tiles.length ? env.tiles : [{ x: 0, y: 0, width: w, height: h, col: 0, row: 0, ref: 'A1' }]
 
   for (const t of tiles) {
     ctx.fillStyle = TILE_HUES[mod(t.col + t.row * 2, TILE_HUES.length)]!
     ctx.fillRect(t.x, t.y, t.width, t.height)
-    const dance = DANCES[mod(t.col + t.row, DANCES.length)]!
+    const dance = hamsterDance(t, env, round)
     // Every other tile is a beat behind, which is most of the charm.
     const frame = (beat + mod(t.col + t.row, 2) * 2) % FRAMES
     const rows = hamsterFrame(dance, frame)
