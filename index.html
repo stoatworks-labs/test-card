@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Generate SMPTE bars, grids, alignment and LED tile test patterns for every physical output in a Resolume advanced output."
+      content="Test patterns for every output in a show, from a Resolume advanced output, a Pixel Peeker wall or a Blend Calc array, one PNG per output at its own raster. Free, in your browser."
     />
-    <title>Test Card</title>
+    <title>Test Card — a test pattern for every physical output</title>
     <link rel="canonical" href="https://test-card.stoatworks-labs.com/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Stoatworks Labs">
     <meta property="og:locale" content="en_GB">
     <meta property="og:url" content="https://test-card.stoatworks-labs.com/">
-    <meta property="og:title" content="Test Card">
-    <meta property="og:description" content="Generate SMPTE bars, grids, alignment and LED tile test patterns for every physical output in a Resolume advanced output.">
+    <meta property="og:title" content="Test Card — a test pattern for every physical output">
+    <meta property="og:description" content="Test patterns for every output in a show, from a Resolume advanced output, a Pixel Peeker wall or a Blend Calc array, one PNG per output at its own raster. Free, in your browser.">
     <!-- Card hosted on the main site: it is regenerated in place by the
          website's make_thumbnails.py and keeps its filename, so a copy
          vendored here would go stale without anything saying so. -->
@@ -24,6 +24,38 @@
     <meta property="og:image:height" content="720">
     <meta property="og:image:alt" content="Test Card">
     <meta name="twitter:card" content="summary_large_image">
+    <!-- One entity with the tool's page on stoatworks-labs.com: same @id there. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "@id": "https://test-card.stoatworks-labs.com#app",
+        "name": "Test Card",
+        "url": "https://test-card.stoatworks-labs.com",
+        "description": "Test patterns for every output in a show, from a Resolume advanced output, a Pixel Peeker wall or a Blend Calc array, one PNG per output at its own raster. Free, in your browser.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any (runs in a web browser)",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "GBP"
+        },
+        "author": {
+          "@id": "https://stoatworks-labs.com/#organization",
+          "@type": "Organization",
+          "name": "Stoatworks Labs",
+          "url": "https://stoatworks-labs.com/"
+        },
+        "publisher": {
+          "@id": "https://stoatworks-labs.com/#organization"
+        },
+        "sameAs": [
+          "https://stoatworks-labs.com/web-tools/test-card/",
+          "https://github.com/stoatworks-labs/test-card"
+        ]
+      }
+    </script>
     <meta name="twitter:image" content="https://stoatworks-labs.com/thumbs/test-card.png">
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- iOS ignores the manifest's icons entirely and wants a PNG of its own. -->
@@ -32,6 +64,18 @@
     <meta name="theme-color" content="#0d1117" />
   </head>
   <body>
+    <noscript>
+      <h1>Test Card</h1>
+      <p>A test pattern for every physical output.</p>
+      <p>Makes test patterns for every physical output in a show, from the file that already describes those outputs. Import a Resolume advanced output, a Pixel Peeker wall or a Blend Calc array and get one PNG per output at that output's exact raster, or a single composition-sized image with every output's region labelled, which proves the output map is what you think it is before the audience finds out otherwise. Besides the bars, grids and alignment patterns there's a classic test card with a stoat where the famous ones had a photograph, a levels check that says which end of the chain has the range wrong, and an AV sync pattern whose beep lands on its flash. It also does the other sort of test pattern, the one that's up while the client walks in: rulers worked out from the pixel pitch, a life-size bunch of bananas, seven dinosaurs at life size, a hamster on every LED tile, a wall broken fifteen different ways, a haunted house for the one week a year it's wanted, and the Windows 95 screensavers, Mystify and 3D Pipes included. The moving ones export from the browser as MP4 loops that go round without a seam, and Resolume Arena plays them at the right size, rate and colour. Or skip the files and, in Chrome, put any pattern full screen on the computer's own displays. Nothing it makes has yet been measured coming out of a real projector or LED processor.</p>
+      <p>Test Card runs in the browser and needs JavaScript.</p>
+      <ul>
+        <li><a href="https://stoatworks-labs.com/software/test-card/">Test Card on stoatworks-labs.com</a></li>
+        <li><a href="https://stoatworks-labs.com/software/test-card/guide/">User guide</a></li>
+        <li><a href="https://github.com/stoatworks-labs/test-card">Source on GitHub</a></li>
+        <li><a href="https://stoatworks-labs.com/web-tools/self-hosting/">Running it on your own server</a></li>
+      </ul>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <!--

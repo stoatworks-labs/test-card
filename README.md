@@ -21,6 +21,8 @@ and get one PNG per physical output at that output's exact raster, or a single c
 image that proves the output map is what you think it is. Everything runs in the browser, and
 nothing is uploaded.
 
+It's live at [test-card.stoatworks-labs.com](https://test-card.stoatworks-labs.com). There's more on [its page at stoatworks-labs.com](https://stoatworks-labs.com/web-tools/test-card/), along with the [user guide](https://stoatworks-labs.com/software/test-card/guide/) and [notes on running it on your own server](https://stoatworks-labs.com/web-tools/self-hosting/).
+
 It also does the other sort of test pattern: the one you put up while the client is walking in.
 Rulers that measure the wall in metres, a bunch of bananas for scale, life-size dinosaurs that
 don't fit, a hamster on every LED tile, a few moving scenes that export as seamless MP4 loops, and

@@ -726,3 +726,6 @@ html.live body > :not(#root) {
   text-align: center;
   pointer-events: none;
 }
+
+/* The footer's link to the tool's page on stoatworks-labs.com: the footer's own colour, not browser blue. */
+.tool-page-link { color: inherit; }

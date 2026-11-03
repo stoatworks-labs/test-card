@@ -525,7 +525,8 @@ export default function App() {
       <footer>
         <span>
           Patterns are generated in your browser. Nothing is uploaded, and the design file
-          never leaves this machine.
+          never leaves this machine.{' '}
+          <a className="tool-page-link" href="https://stoatworks-labs.com/web-tools/test-card/" target="_blank" rel="noopener">More about Test Card</a>.
         </span>
         <button
           className="ghost small"

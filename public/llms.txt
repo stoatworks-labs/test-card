@@ -1,0 +1,16 @@
+# Test Card
+
+> A test pattern for every physical output
+
+Makes test patterns for every physical output in a show, from the file that already describes those outputs. Import a Resolume advanced output, a Pixel Peeker wall or a Blend Calc array and get one PNG per output at that output's exact raster, or a single composition-sized image with every output's region labelled, which proves the output map is what you think it is before the audience finds out otherwise. Besides the bars, grids and alignment patterns there's a classic test card with a stoat where the famous ones had a photograph, a levels check that says which end of the chain has the range wrong, and an AV sync pattern whose beep lands on its flash. It also does the other sort of test pattern, the one that's up while the client walks in: rulers worked out from the pixel pitch, a life-size bunch of bananas, seven dinosaurs at life size, a hamster on every LED tile, a wall broken fifteen different ways, a haunted house for the one week a year it's wanted, and the Windows 95 screensavers, Mystify and 3D Pipes included. The moving ones export from the browser as MP4 loops that go round without a seam, and Resolume Arena plays them at the right size, rate and colour. Or skip the files and, in Chrome, put any pattern full screen on the computer's own displays. Nothing it makes has yet been measured coming out of a real projector or LED processor.
+
+It's a Stoatworks Labs web tool: free, and it runs in a web browser.
+
+## Links
+
+- [Test Card, the app](https://test-card.stoatworks-labs.com/): runs in the browser, free
+- [Project page](https://stoatworks-labs.com/software/test-card/)
+- [Web tool page](https://stoatworks-labs.com/web-tools/test-card/)
+- [User guide](https://stoatworks-labs.com/software/test-card/guide/)
+- [Source on GitHub](https://github.com/stoatworks-labs/test-card)
+- [Self-hosting](https://stoatworks-labs.com/web-tools/self-hosting/): run it on your own server
