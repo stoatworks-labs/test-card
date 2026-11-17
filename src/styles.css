@@ -1,14 +1,29 @@
+/* Colours come from the shared Stoatworks theme (stoatworks-theme.css, imported
+   first), so the editor follows the system's light or dark setting the way every
+   fleet tool does. The patterns are output: the preview sits on the theme's dark
+   stage and the live window stays black, in both modes. */
 :root {
-  --bg: #0d1117;
-  --panel: #161b22;
-  --panel-2: #1c232c;
-  --line: #2c333d;
-  --text: #e6edf3;
+  --bg: var(--sw-paper);
+  --panel: var(--sw-card);
+  --panel-2: var(--sw-tint);
+  --line: var(--sw-line);
+  --text: var(--sw-ink);
+  --dim: var(--sw-muted);
+  --accent: var(--sw-accent);
+  --warn: var(--sw-warn);
+  --error: var(--sw-bad);
+}
+
+/* What sits on a pattern (the preview's readout, the live window's overlay)
+   keeps the dark-ground colours it was drawn for, whatever the mode. */
+.preview:not(.empty),
+.live-view {
+  --line: var(--sw-stage-line);
+  --text: var(--sw-stage-ink);
   --dim: #8b949e;
-  --accent: #3d7dff;
   --warn: #f0a020;
   --error: #f05252;
-  color-scheme: dark;
+  color: var(--text);
 }
 
 * {
@@ -19,33 +34,53 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font: 14px/1.5 var(--sw-font);
+}
+
+/* The navy bar: full width, its contents on the same column as the page. */
+.top {
+  display: block;
+  padding: 10px 20px;
+}
+
+.top-inner {
+  max-width: 1860px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+}
+
+.top h1 {
+  font-size: 17px;
+}
+
+.top .sw-sub {
+  flex: 1 1 320px;
+  font-size: 13px;
+}
+
+.top [data-stoatworks-about] {
+  margin-left: auto;
+}
+
+/* The page's own bare `button` rule would beat the theme's bar buttons. */
+.top button {
+  background: transparent;
+  color: var(--sw-navy-ink);
+  border-color: var(--sw-navy-line);
+  padding: 4px 12px;
+}
+
+.top button:hover:not(:disabled) {
+  border-color: var(--sw-accent-soft);
 }
 
 .app {
   max-width: 1900px;
   margin: 0 auto;
   padding: 20px;
-}
-
-/* The title and the About trigger share a line; the paragraph below still runs
-   the full width, so the button cannot be mistaken for part of the copy. */
-.header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-header h1 {
-  margin: 0;
-  font-size: 22px;
-  letter-spacing: 0.02em;
-}
-
-header p {
-  margin: 4px 0 18px;
-  color: var(--dim);
 }
 
 .layout {
@@ -140,9 +175,9 @@ header p {
 input,
 select,
 textarea {
-  background: var(--panel-2);
+  background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--sw-radius-sm);
   color: var(--text);
   padding: 7px 8px;
   font: inherit;
@@ -191,9 +226,9 @@ input[type='checkbox'] {
 }
 
 button {
-  background: var(--panel-2);
+  background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--sw-radius-sm);
   color: var(--text);
   padding: 8px 12px;
   font: inherit;
@@ -212,8 +247,12 @@ button:disabled {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--sw-on-accent);
   font-weight: 600;
+}
+
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
 button.ghost {
@@ -267,7 +306,7 @@ button.danger {
 .dropzone:hover,
 .dropzone.over {
   border-color: var(--accent);
-  background: rgba(61, 125, 255, 0.06);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 .dropzone span {
@@ -373,7 +412,7 @@ ul.outputs {
 .output-size {
   font-size: 11px;
   color: var(--dim);
-  font-family: ui-monospace, Menlo, monospace;
+  font-family: var(--sw-mono);
 }
 
 .output-edit {
@@ -404,9 +443,21 @@ ul.outputs {
   background: transparent;
 }
 
+.segmented button {
+  color: var(--dim);
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--line);
+}
+
+.segmented button:hover:not(:disabled) {
+  color: var(--text);
+}
+
 .segmented button.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--sw-on-accent);
 }
 
 .export-buttons {
@@ -420,11 +471,11 @@ ul.outputs {
 .export-buttons .busy {
   font-size: 12px;
   color: var(--dim);
-  font-family: ui-monospace, Menlo, monospace;
+  font-family: var(--sw-mono);
 }
 
 .preview {
-  background: #000;
+  background: var(--sw-stage);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px;
@@ -461,7 +512,7 @@ ul.outputs {
   gap: 14px;
   font-size: 11px;
   color: var(--dim);
-  font-family: ui-monospace, Menlo, monospace;
+  font-family: var(--sw-mono);
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -518,7 +569,7 @@ button.kind {
 
 button.kind.active {
   border-color: var(--accent);
-  background: rgba(61, 125, 255, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
 }
 
 .kind-name {
@@ -621,7 +672,7 @@ button.active-outline {
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--error);
-  color: #fff;
+  color: var(--sw-on-accent);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -694,7 +745,7 @@ html.live body > :not(#root) {
   background: rgba(13, 17, 23, 0.88);
   border: 1px solid var(--line);
   color: var(--text);
-  font: 12px/1.6 ui-monospace, Menlo, monospace;
+  font: 12px/1.6 var(--sw-mono);
   pointer-events: none;
 }
 

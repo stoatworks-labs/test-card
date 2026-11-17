@@ -338,21 +338,24 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <header>
-        <div className="header-row">
-          <h1>Test Card</h1>
-          {/* Opens the shared About dialog — see public/about.js, which delegates
-              this attribute from the document, so nothing needs importing here. */}
-          <button type="button" data-stoatworks-about>
-            About
-          </button>
-        </div>
-        <p>
+    <>
+    <header className="sw-bar top">
+      <div className="top-inner">
+        <h1 className="sw-brand">
+          <span className="sw-mark" aria-hidden="true">▣</span> Test Card
+        </h1>
+        <p className="sw-sub">
           Test patterns for every physical output in a Resolume advanced output, a Pixel
           Peeker wall or a Blend Calc array.
         </p>
-      </header>
+        {/* Opens the shared About dialog — see public/about.js, which delegates
+            this attribute from the document, so nothing needs importing here. */}
+        <button type="button" data-stoatworks-about>
+          About
+        </button>
+      </div>
+    </header>
+    <div className="app">
 
       <div className="layout">
         <aside className="left">
@@ -540,5 +543,6 @@ export default function App() {
         </button>
       </footer>
     </div>
+    </>
   )
 }

@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import App from './ui/App'
 import { LiveView } from './ui/LiveView'
 import { parseLiveParams } from './live/plan'
+// Shared Stoatworks theme, loaded first: vendored from stoatworks-backend/theme by scripts/sync-theme.sh.
+import './stoatworks-theme.css'
 import './styles.css'
 import { registerServiceWorker } from './register-sw'
 
