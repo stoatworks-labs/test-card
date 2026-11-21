@@ -64,6 +64,11 @@ src/lib/video.ts      WebCodecs encode loop, the RGB -> Y′CbCr 4:2:0 conversio
                       tile planner for rasters the encoder won't take whole
 src/import/*.ts       one file per source format + detect.ts to sniff
 src/state/            zustand store, persisted to localStorage
+src/state/merge.ts    merge (a saved state over the defaults), mergeKnown (a pasted link's: known
+                      keys of the right type only) and diff (what a link carries)
+src/state/share.ts    share links: the whole setup in the URL fragment, DEFLATEd, settings as a
+                      diff from the defaults (see the trap below)
+src/ui/SharePanel.tsx the Share link panel, and the editor opening a link, with Undo
 src/live/plan.ts      live output's pure parts: URL, placement, default display→source
 src/live/clock.ts     the wall clock every live window agrees on (see trap below)
 src/live/screens.ts   the Window Management API (display list), typed here because TS isn't yet
@@ -195,6 +200,15 @@ steers them only over `channel.ts`. "1:1" is only claimed when the canvas, sized
 in device pixels from `devicePixelContentBoxSize`, is the raster's size.
 
 ## Traps that have already cost time
+
+**A share link stores settings as their difference from `DEFAULT_SETTINGS`.** That keeps a link
+to plain bars a couple of hundred characters long, and it means changing a default changes what
+every existing link shows for that setting. Adding an option is safe (old links take its default).
+Renaming or retyping one silently drops it from old links, because `mergeKnown` takes only keys the
+defaults have, with a value of the same type. A change to the payload's shape bumps
+`SHARE_VERSION`; an older build refuses a newer link rather than guessing. Outputs travel whole.
+The token lives in the fragment so the server never sees it; keep it there (the footer promises
+nothing is uploaded). Only the editor opens links: a live window ignores the fragment (rule 12).
 
 **A page gets one pop-up per click, and full screen only from a click in that
 window.** Chrome consumes the click's activation on the first `window.open`, so
@@ -410,7 +424,7 @@ it re-syncs.
 
 ## Testing
 
-`npm test` — 571 tests, all offline. ffmpeg is **not** required: the RP 219
+`npm test` — 582 tests, all offline. ffmpeg is **not** required: the RP 219
 reference is committed as JSON, and the MP4 tests that ask ffprobe and ffmpeg
 to read a muxed file skip when they are not installed (they run on this Mac).
 The H.264 they mux is a committed libx264 stream, regenerated with

@@ -598,6 +598,29 @@ footer span {
   flex: 1;
 }
 
+/* --- share link --------------------------------------------------------- */
+
+.share-panel {
+  margin-bottom: 12px;
+}
+
+.share-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0 4px;
+}
+
+.share-row .share-link {
+  flex: 1;
+  font-family: var(--sw-mono);
+  font-size: 12px;
+}
+
+.share-row button {
+  flex: none;
+}
+
 /* --- live output -------------------------------------------------------- */
 
 button.active-outline {

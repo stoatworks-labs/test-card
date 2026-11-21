@@ -388,6 +388,34 @@ picture and to the sound, which nobody has measured, so to measure a system, pla
 
 ---
 
+## Share links: the same setup on another computer
+
+**Share link**, beside the download buttons, makes a link to exactly what's set up: the outputs,
+every imported slice and cabinet, the pattern and every setting down to the burn-in text. Open it
+on another computer and you get the same pattern on the same rasters. Set the show up on your
+laptop, send yourself the link, open it on the media server and press **Live output** or download
+the files there.
+
+1. Press **Share link**. The panel shows the link, and keeps it up to date while it's open.
+2. Press **Copy link**. Where the page can't reach the clipboard (a copy opened over plain http,
+   like the desktop app's from another machine), the link is selected instead: copy it from the box.
+3. Open it on the other computer, in the same version of Test Card (the site, or your own copy).
+
+A few things to know:
+
+- **Nothing is uploaded.** The setup is written into the link itself, after the `#`, and a browser
+  never sends that part to the server. But it is all there, so anyone you send the link to can read
+  your output names.
+- **It replaces what's there.** Opening a link swaps out whatever that browser had set up. The note
+  at the top says what came in, and **Undo, put mine back** brings the old setup back.
+- **The picture doesn't travel.** The image pattern, or a picture in the middle of the classic card
+  or AV sync, needs the picture loaded on each computer. The panel says so when it matters.
+- **Big walls make long links.** Plain bars on one output take a couple of hundred characters; a
+  Pixel Peeker wall of 155 cabinets takes about 3,800. Some chat apps cut a link that long short. If
+  one arrives broken, the app says so rather than guessing: send it in an email or a text file.
+
+---
+
 ## Level range: the app asks because a PNG cannot say
 
 SMPTE bars are defined in Y′CbCr. A PNG is RGB, and a PNG can't record which convention it was

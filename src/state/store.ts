@@ -10,16 +10,20 @@
 import { create } from 'zustand'
 import type { ImportResult, Output, PatternSettings, RenderMode } from '../types'
 import { DEFAULT_SETTINGS } from './defaults'
+import { merge, type DeepPartial } from './merge'
 
 const KEY = 'test-card/state/1'
 
-type Persisted = {
+/** A whole setup: what is saved, and what a share link carries. */
+export type Setup = {
   outputs: Output[]
   settings: PatternSettings
   projectName: string
   composition?: { widthPx: number; heightPx: number }
   mode: RenderMode
 }
+
+type Persisted = Setup
 
 /** What is known about the loaded image. The pixels live in render.ts, never here. */
 export type ImageInfo = { name: string; width: number; height: number; version: number }
@@ -40,23 +44,15 @@ type State = Persisted & {
   setMode: (mode: RenderMode) => void
   setProjectName: (name: string) => void
   patchSettings: (patch: DeepPartial<PatternSettings>) => void
+  /** Swap in a whole setup: one from a share link, or the one it replaced, put back. */
+  replaceSetup: (setup: Setup, warnings: string[]) => void
   reset: () => void
 }
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] }
-
-function merge<T>(base: T, patch: DeepPartial<T>): T {
-  const out = { ...base } as Record<string, unknown>
-  for (const [k, v] of Object.entries(patch as Record<string, unknown>)) {
-    if (v === undefined) continue
-    const cur = out[k]
-    // Arrays are values here (safe areas), not things to merge element-wise.
-    out[k] =
-      v && typeof v === 'object' && !Array.isArray(v) && cur && typeof cur === 'object'
-        ? merge(cur, v as DeepPartial<unknown>)
-        : v
-  }
-  return out as T
+/** The setup as it stands, and its import warnings, in the shape `replaceSetup` takes back. */
+export function currentSetup(): { setup: Setup; warnings: string[] } {
+  const { outputs, settings, projectName, composition, mode, warnings } = useStore.getState()
+  return { setup: { outputs, settings, projectName, composition, mode }, warnings }
 }
 
 function load(): Persisted | null {
@@ -156,6 +152,18 @@ export const useStore = create<State>((set, get) => {
     setMode: (mode) => after({ mode }),
     setProjectName: (projectName) => after({ projectName }),
     patchSettings: (patch) => after({ settings: merge(get().settings, patch) }),
+
+    replaceSetup: (setup, warnings) =>
+      after({
+        outputs: setup.outputs,
+        settings: setup.settings,
+        projectName: setup.projectName,
+        composition: setup.composition,
+        // As loadImport: never point at a mode the setup cannot render.
+        mode: setup.composition ? setup.mode : 'per-output',
+        warnings,
+        selectedId: setup.outputs[0]?.id ?? null,
+      }),
 
     reset: () =>
       after({

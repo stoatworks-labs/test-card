@@ -1,7 +1,7 @@
 # Test Card
 
 > **AI-assisted project.** This codebase was created with [Claude Code](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. There are 571 tests in all. The RP 219
+> (Anthropic), directed and reviewed by a human author. There are 582 tests in all. The RP 219
 > pattern is checked against a reference *measured* from ffmpeg's `smptehdbars` rather than
 > transcribed from prose descriptions of the standard, and its fifteen colours are computed through
 > Rec. 709 and land exactly on those measured values, which is itself the proof the measurement is
@@ -231,6 +231,25 @@ so there's a click per display unless the site is allowed pop-ups. In other brow
 window and drag it over. What reaches the cable goes through the browser's and the OS's colour
 management, which hasn't been measured, so for levels and exact bar values play the PNG or MP4
 from the media server.
+
+## Share links
+
+**Share link**, beside the download buttons, gives you a link to this exact setup: the outputs
+(with every imported slice and cabinet), the pattern and every setting. Open it on another computer
+and you get the same pattern on the same rasters, ready to download or put on its displays with
+Live output. Copy it from the laptop you set the show up on, open it on the media server.
+
+The setup is written into the link itself, after the `#`, which a browser never sends to the
+server, so nothing is uploaded. The flip side is that anyone you send it to can read your output
+names. Bars on one output make a link of a couple of hundred characters; a 155-cabinet Pixel Peeker
+wall makes one of about 3,800, which some apps cut short, so for those an email or a text file is
+safer. Your picture (the image pattern, or a picture in a card's centre) can't go in a link: load
+it on each computer.
+
+Opening a link replaces whatever was set up in that browser, and offers it back with **Undo, put
+mine back**. Settings are stored as the difference from the defaults, so a link to plain bars stays
+short, at the price that if a later version changes a default, an old link takes the new one.
+
 ## Level range
 
 SMPTE bars are defined in Y′CbCr, a PNG is RGB, and a PNG can't say which convention it was written
@@ -286,6 +305,11 @@ for the invariants and the traps.
 - **End to end**, driven in a browser: a real Blend Calc export imported, six 1920x1200 PNGs
   rendered and packed, and the resulting ZIP unpacked and its PNG headers checked. Bar colours and
   pluge values were sampled off the canvas and confirmed against the standard.
+- **Share links:** round-tripped by the tests, a real 155-cabinet Pixel Peeker map among them, and
+  damaged, cut-short and oversized links are refused with a reason. Driven in a browser: a real
+  Arena preset imported, the pattern changed, the link opened in a cleared browser, and every
+  output, slice and setting came back; pasted into a tab with its own setup, **Undo** put the saved
+  state back byte for byte.
 - **Real size:** the drawings are held to their sizes by the tests. Each dinosaur is its quoted
   length nose to tail within 3.5% and its stated height within 6%, the banana is 190 mm along its
   curve, and the person is 1.75 m. Ruler ticks are tested to sit within half a pitch of true, on a

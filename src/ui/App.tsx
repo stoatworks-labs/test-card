@@ -5,6 +5,7 @@ import { PatternPanel } from './PatternPanel'
 import { Preview } from './Preview'
 import { OutputList } from './OutputList'
 import { LiveButton, LivePanel } from './LivePanel'
+import { ShareButton, SharePanel, SharedBanner, useSharedLink } from './SharePanel'
 import { superviseLiveWindows } from '../live/supervise'
 import {
   buildManifest,
@@ -45,6 +46,8 @@ export default function App() {
   const [busy, setBusy] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [liveOpen, setLiveOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
+  const [opened, dismissOpened] = useSharedLink()
   const cancel = useRef(false)
 
   const selected = store.outputs.find((o) => o.id === store.selectedId) ?? store.outputs[0] ?? null
@@ -364,6 +367,7 @@ export default function App() {
         </aside>
 
         <main>
+          {opened ? <SharedBanner opened={opened} onDismiss={dismissOpened} /> : null}
           {store.warnings.length ? (
             <div className="callout info">
               <strong>From the import</strong>
@@ -398,6 +402,7 @@ export default function App() {
             </div>
 
             <div className="export-buttons">
+              <ShareButton open={shareOpen} onClick={() => setShareOpen(!shareOpen)} />
               <LiveButton open={liveOpen} onClick={() => setLiveOpen(!liveOpen)} />
               {busy ? (
                 <>
@@ -438,6 +443,7 @@ export default function App() {
               )}
             </div>
           </div>
+          {shareOpen ? <SharePanel onClose={() => setShareOpen(false)} /> : null}
           {liveOpen ? <LivePanel onClose={() => setLiveOpen(false)} /> : null}
 
           {moving && endless ? (
